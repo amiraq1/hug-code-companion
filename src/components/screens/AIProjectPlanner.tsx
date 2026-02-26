@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   ArrowLeft,
@@ -58,6 +58,150 @@ const STATUS_ICONS: Record<string, typeof Circle> = {
   done: CheckCircle2,
 };
 
+// 1. استخراج TaskCard كمكون منفصل (Architectural Improvement for Performance)
+const TaskCard = memo(({
+  task,
+  subtasks,
+  isExpanded,
+  analyzing,
+  onToggleStatus,
+  onAnalyze,
+  onToggleExpand
+}: {
+  task: Task;
+  subtasks: Task[];
+  isExpanded: boolean;
+  analyzing: boolean;
+  onToggleStatus: (t: Task) => void;
+  onAnalyze: (t: Task) => void;
+  onToggleExpand: (id: string) => void;
+}) => {
+  const StatusIcon = STATUS_ICONS[task.status] || Circle;
+
+  return (
+    <div className="group relative rounded-lg border border-border/50 bg-ide-sidebar/80 backdrop-blur-sm overflow-hidden transition-all duration-300 hover:border-primary/40 hover:shadow-[0_0_20px_-5px_rgba(234,88,12,0.1)]">
+      {/* Dynamic Status Progress Bar (Avant-Garde UX) */}
+      <div
+        className={`absolute top-0 right-0 w-1 h-full transition-colors duration-500 ease-in-out ${task.status === "done" ? 'bg-ide-success' :
+          task.status === "in_progress" ? 'bg-primary shadow-[0_0_10px_rgba(234,88,12,0.5)]' :
+            'bg-transparent'
+          }`}
+      />
+
+      <div className="flex items-start gap-3 p-3 text-right">
+        {/* Actions Container */}
+        <div className="flex flex-col items-center gap-2 shrink-0">
+          <button onClick={() => onToggleStatus(task)} className="mt-0.5 hover:scale-110 transition-transform">
+            <StatusIcon
+              className={`h-4 w-4 ${task.status === "done" ? "text-ide-success" :
+                task.status === "in_progress" ? "text-primary fill-primary/20" :
+                  "text-muted-foreground"
+                }`}
+            />
+          </button>
+
+          <div className="flex flex-col items-center gap-1">
+            {!subtasks.length && (
+              <button
+                onClick={() => onAnalyze(task)}
+                disabled={analyzing}
+                className="p-1 rounded hover:bg-secondary/60 text-muted-foreground transition-colors disabled:opacity-50"
+                title="تحليل المهمة (Deep Analysis)"
+              >
+                {analyzing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                ) : (
+                  <Search className="h-3.5 w-3.5" />
+                )}
+              </button>
+            )}
+            {subtasks.length > 0 && (
+              <button
+                onClick={() => onToggleExpand(task.id)}
+                className="p-1 rounded hover:bg-secondary/60 text-muted-foreground transition-colors"
+                title={isExpanded ? "طي" : "توسيع"}
+              >
+                {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content Container */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-1.5 mb-1.5 flex-wrap">
+            <span className={`text-sm font-semibold transition-all duration-300 ${task.status === "done" ? "line-through text-muted-foreground/60" : "text-foreground"
+              }`}>
+              {task.title}
+            </span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full border border-opacity-30 tracking-wider font-mono ${PRIORITY_COLORS[task.priority]}`}>
+              {PRIORITY_LABELS[task.priority]}
+            </span>
+          </div>
+
+          {task.description && (
+            <p className="text-[11px] text-muted-foreground/80 leading-relaxed mb-2 line-clamp-2 pr-1">{task.description}</p>
+          )}
+
+          {/* Metadata Footer */}
+          <div className="flex items-center gap-3 text-[10px] text-muted-foreground/60 font-mono">
+            {task.estimated_hours != null && (
+              <span className="flex items-center gap-1 bg-secondary/30 px-1.5 py-0.5 rounded">
+                <Clock className="h-3 w-3 text-primary/70" />
+                {task.estimated_hours}h
+              </span>
+            )}
+            {task.assignee && (
+              <span className="flex items-center gap-1 bg-secondary/30 px-1.5 py-0.5 rounded">
+                <User className="h-3 w-3 text-accent/70" />
+                {task.assignee}
+              </span>
+            )}
+            {task.deadline_days != null && (
+              <span className="bg-secondary/30 px-1.5 py-0.5 rounded">
+                Day {task.deadline_days}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Subtasks Container */}
+      {isExpanded && subtasks.length > 0 && (
+        <div className="border-t border-border/30 bg-background/40 p-2 space-y-1 backdrop-blur-md">
+          {subtasks.map((st) => {
+            const StIcon = STATUS_ICONS[st.status] || Circle;
+            return (
+              <div key={st.id} className="group/st flex items-start gap-2 py-1.5 px-2 rounded-md hover:bg-secondary/20 transition-colors">
+                <button onClick={() => onToggleStatus(st)} className="mt-0.5 shrink-0 opacity-80 hover:opacity-100">
+                  <StIcon
+                    className={`h-3 w-3 ${st.status === "done" ? "text-ide-success" :
+                      st.status === "in_progress" ? "text-primary" :
+                        "text-muted-foreground/50"
+                      }`}
+                  />
+                </button>
+                <div className="flex-1 min-w-0 text-right pr-2">
+                  <span className={`block text-[11px] font-medium ${st.status === "done" ? "line-through text-muted-foreground/50" : "text-foreground/90 group-hover/st:text-primary transition-colors"
+                    }`}>
+                    {st.title}
+                  </span>
+                  <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground/60 mt-0.5">
+                    {st.estimated_hours != null && <span>{st.estimated_hours}h</span>}
+                    <span className={`text-[9px] px-1 py-0 rounded border border-opacity-20 ${PRIORITY_COLORS[st.priority]}`}>
+                      {PRIORITY_LABELS[st.priority]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+});
+
 interface AIProjectPlannerProps {
   onBack: () => void;
   sessionId: string;
@@ -114,8 +258,8 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
         await fetchTasks(data.project_id);
         setView("tasks");
       }
-    } catch (e: any) {
-      toast.error(e.message || "حدث خطأ أثناء توليد الخطة");
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "حدث خطأ أثناء توليد الخطة");
     } finally {
       setLoading(false);
     }
@@ -137,8 +281,8 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
       toast.success("تم تحليل المهمة بنجاح!");
       await fetchTasks(task.project_id);
       setExpandedTasks((prev) => new Set(prev).add(task.id));
-    } catch (e: any) {
-      toast.error(e.message || "حدث خطأ أثناء تحليل المهمة");
+    } catch (e: unknown) {
+      toast.error((e as Error).message || "حدث خطأ أثناء تحليل المهمة");
     } finally {
       setAnalyzing(null);
     }
@@ -280,129 +424,35 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
         <span className="text-xs font-semibold text-foreground truncate">{selectedProject?.name}</span>
       </div>
 
-      {/* Summary bar */}
-      <div className="px-3 py-2 bg-ide-sidebar/50 border-b border-border flex items-center gap-3 text-[10px] text-muted-foreground">
-        <span>{mainTasks.length} مهمة</span>
-        <span>•</span>
-        <span>{tasks.filter((t) => t.status === "done").length} مكتملة</span>
-        <span>•</span>
-        <span>{Math.round(tasks.reduce((s, t) => s + (t.estimated_hours || 0), 0))} ساعة</span>
+      <div className="px-4 py-3 bg-secondary/20 border-b border-border flex items-center justify-between text-[11px] text-muted-foreground tracking-wide uppercase font-mono shadow-inner">
+        <div className="flex gap-4">
+          <span className="flex items-center gap-1"><Circle className="h-3 w-3 text-muted-foreground" /> {mainTasks.length}</span>
+          <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-ide-success" /> {tasks.filter((t) => t.status === "done").length}</span>
+        </div>
+        <span className="flex items-center gap-1 font-semibold text-primary/80"><Clock className="h-3 w-3" /> {Math.round(tasks.reduce((s, t) => s + (t.estimated_hours || 0), 0))}h</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-1.5" dir="rtl">
-        {mainTasks.map((task) => {
-          const subtasks = getSubtasks(task.id);
-          const isExpanded = expandedTasks.has(task.id);
-          const StatusIcon = STATUS_ICONS[task.status] || Circle;
-
-          return (
-            <div key={task.id} className="rounded-lg border border-border bg-ide-sidebar overflow-hidden">
-              <div className="flex items-start gap-2 p-2.5">
-                <button onClick={() => toggleStatus(task)} className="mt-0.5 shrink-0">
-                  <StatusIcon
-                    className={`h-4 w-4 ${
-                      task.status === "done"
-                        ? "text-green-400"
-                        : task.status === "in_progress"
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                </button>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                    <span className={`text-xs font-semibold ${task.status === "done" ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                      {task.title}
-                    </span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${PRIORITY_COLORS[task.priority]}`}>
-                      {PRIORITY_LABELS[task.priority]}
-                    </span>
-                  </div>
-                  {task.description && (
-                    <p className="text-[11px] text-muted-foreground line-clamp-2 mb-1">{task.description}</p>
-                  )}
-                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                    {task.estimated_hours && (
-                      <span className="flex items-center gap-0.5">
-                        <Clock className="h-3 w-3" />
-                        {task.estimated_hours}س
-                      </span>
-                    )}
-                    {task.assignee && (
-                      <span className="flex items-center gap-0.5">
-                        <User className="h-3 w-3" />
-                        {task.assignee}
-                      </span>
-                    )}
-                    {task.deadline_days && <span>📅 يوم {task.deadline_days}</span>}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  {!subtasks.length && (
-                    <button
-                      onClick={() => handleAnalyzeTask(task)}
-                      disabled={analyzing === task.id}
-                      className="p-1 rounded hover:bg-secondary/60 text-muted-foreground"
-                      title="تحليل المهمة"
-                    >
-                      {analyzing === task.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                      ) : (
-                        <Search className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  )}
-                  {subtasks.length > 0 && (
-                    <button
-                      onClick={() =>
-                        setExpandedTasks((prev) => {
-                          const next = new Set(prev);
-                          next.has(task.id) ? next.delete(task.id) : next.add(task.id);
-                          return next;
-                        })
-                      }
-                      className="p-1 rounded hover:bg-secondary/60 text-muted-foreground"
-                    >
-                      {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {isExpanded && subtasks.length > 0 && (
-                <div className="border-t border-border bg-background/50 px-3 py-1.5 space-y-1">
-                  {subtasks.map((st) => {
-                    const StIcon = STATUS_ICONS[st.status] || Circle;
-                    return (
-                      <div key={st.id} className="flex items-start gap-2 py-1">
-                        <button onClick={() => toggleStatus(st)} className="mt-0.5 shrink-0">
-                          <StIcon
-                            className={`h-3.5 w-3.5 ${
-                              st.status === "done" ? "text-green-400" : st.status === "in_progress" ? "text-primary" : "text-muted-foreground"
-                            }`}
-                          />
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <span className={`text-[11px] ${st.status === "done" ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                            {st.title}
-                          </span>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
-                            <span className={`px-1 py-0 rounded border ${PRIORITY_COLORS[st.priority]}`}>
-                              {PRIORITY_LABELS[st.priority]}
-                            </span>
-                            {st.estimated_hours && <span>{st.estimated_hours}س</span>}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/50" dir="rtl">
+        {mainTasks.map((task) => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            subtasks={getSubtasks(task.id)}
+            isExpanded={expandedTasks.has(task.id)}
+            analyzing={analyzing === task.id}
+            onToggleStatus={toggleStatus}
+            onAnalyze={handleAnalyzeTask}
+            onToggleExpand={(id) => setExpandedTasks((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) {
+                next.delete(id);
+              } else {
+                next.add(id);
+              }
+              return next;
+            })}
+          />
+        ))}
       </div>
     </div>
   );

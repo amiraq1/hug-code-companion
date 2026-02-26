@@ -10,7 +10,9 @@ function getSessionId(): string {
   if (raw) {
     try {
       return decodeURIComponent(atob(raw).split("").reverse().join(""));
-    } catch {}
+    } catch {
+      // Ignore format errors
+    }
   }
   // Fallback
   const id = crypto.randomUUID();
@@ -76,7 +78,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Pr
   for (let i = 0; i <= retries; i++) {
     try {
       return await fn();
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (i === retries) throw err;
       // Don't retry auth errors
       if (err instanceof GitHubError && (err.type === "auth" || err.type === "not_found")) throw err;
@@ -99,7 +101,7 @@ export function useGitHub() {
       return;
     }
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`,
         {
@@ -127,13 +129,13 @@ export function useGitHub() {
   }, [checkStatus]);
 
   const connect = useCallback(() => {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
     const redirectUri = window.location.origin;
     window.location.href = `https://${projectId}.supabase.co/functions/v1/github-auth/authorize?session_id=${sessionId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
   }, [sessionId]);
 
   const disconnect = useCallback(async () => {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
     await fetch(`https://${projectId}.supabase.co/functions/v1/github-auth/disconnect`, {
       method: "POST",
       headers: {
@@ -153,7 +155,7 @@ export function useGitHub() {
       }
 
       return withRetry(async () => {
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
         const res = await fetch(
           `https://${projectId}.supabase.co/functions/v1/github-api`,
           {

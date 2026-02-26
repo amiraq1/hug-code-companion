@@ -152,7 +152,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
     if (connected && online) {
       listRepos().then((data) => {
         if (Array.isArray(data)) setRepos(data);
-      }).catch(() => {});
+      }).catch(() => { });
     }
   }, [connected, online, listRepos]);
 
@@ -195,7 +195,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
           setDiffSource("");
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       const msg = e instanceof GitHubError ? e.message : "Failed to load data";
       setError(msg);
     }
@@ -215,7 +215,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
       setNewBranchName("");
       setSuccessMsg(`Branch "${newBranchName.trim()}" created`);
       await refresh();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e instanceof GitHubError ? e.message : "Failed to create branch");
     }
     setCreatingBranch(false);
@@ -228,7 +228,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
       await deleteBranch(selectedRepo.owner, selectedRepo.repo, branch);
       setSuccessMsg(`Branch "${branch}" deleted`);
       await refresh();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e instanceof GitHubError ? e.message : "Failed to delete branch");
     }
   };
@@ -246,7 +246,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
         setMergingFrom(null);
       }
       await refresh();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e instanceof GitHubError ? e.message : "Merge failed");
     }
     setMerging(false);
@@ -262,7 +262,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
       setDiffFiles(data.files || []);
       setDiffSummary(null);
       setDiffSource(`commit ${sha.slice(0, 7)}`);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e instanceof GitHubError ? e.message : "Failed to load diff");
     }
     setLoading(false);
@@ -380,11 +380,10 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[10px] font-medium transition-all ${
-              tab === t.id
+            className={`flex-1 flex items-center justify-center gap-1 px-1 py-2 text-[10px] font-medium transition-all ${tab === t.id
                 ? "text-primary border-b border-primary bg-primary/5"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
-            }`}
+              }`}
           >
             {t.icon}
             {t.label}
@@ -479,9 +478,8 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
             {branches.map((b) => (
               <div
                 key={b.name}
-                className={`px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors cursor-pointer group ${
-                  b.name === activeBranch ? "bg-primary/5" : ""
-                }`}
+                className={`px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors cursor-pointer group ${b.name === activeBranch ? "bg-primary/5" : ""
+                  }`}
                 onClick={() => setActiveBranch(b.name)}
               >
                 <GitBranch className={`h-3 w-3 shrink-0 ${b.name === activeBranch ? "text-primary" : "text-muted-foreground"}`} />

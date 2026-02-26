@@ -71,11 +71,11 @@ export function usePreview() {
           `<pre class="json-view"><code>${escapeHtml(formatted)}</code></pre>`,
           getJsonStyles()
         );
-      } catch (e: any) {
+      } catch (e: unknown) {
         return wrapInDocument(
           `<div class="json-error">
             <span class="error-icon">⚠</span>
-            <span>Invalid JSON: ${escapeHtml(e.message)}</span>
+            <span>Invalid JSON: ${escapeHtml((e as Error).message)}</span>
           </div>
           <pre class="json-raw"><code>${escapeHtml(content)}</code></pre>`,
           getJsonStyles()

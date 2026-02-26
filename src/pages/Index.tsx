@@ -46,6 +46,7 @@ const LazyFallback = () => (
 
 type AppScreen = "login" | "repos" | "editor" | "settings" | "ai-planner";
 type MobileTab = "files" | "editor" | "preview" | "chat" | "git";
+const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -62,7 +63,6 @@ const Index = () => {
   const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
   const [slideDirection, setSlideDirection] = useState<SwipeDirection>(null);
-  const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
 
   const navigateTab = useCallback((direction: "left" | "right") => {
     setMobileTab(prev => {
@@ -301,11 +301,10 @@ const Index = () => {
         <div className="flex-1 overflow-hidden flex flex-col min-h-0" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <div
             key={mobileTab}
-            className={`flex-1 flex flex-col min-h-0 ${
-              slideDirection === "left" ? "animate-slide-from-right" :
-              slideDirection === "right" ? "animate-slide-from-left" :
-              "animate-fade-in"
-            }`}
+            className={`flex-1 flex flex-col min-h-0 ${slideDirection === "left" ? "animate-slide-from-right" :
+                slideDirection === "right" ? "animate-slide-from-left" :
+                  "animate-fade-in"
+              }`}
           >
             {mobileTab === "files" && (
               <div className="flex-1 overflow-y-auto">
@@ -374,11 +373,10 @@ const Index = () => {
             <button
               key={id}
               onClick={() => switchToTab(id)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[3rem] ${
-                mobileTab === id
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[3rem] ${mobileTab === id
                   ? "text-primary"
                   : "text-muted-foreground"
-              }`}
+                }`}
             >
               <Icon className="h-5 w-5" />
               <span className="text-[10px] font-medium">{label}</span>
@@ -445,11 +443,10 @@ const Index = () => {
           <div className="w-px h-4 bg-border mx-1" />
           <button
             onClick={() => setPreviewVisible(!previewVisible)}
-            className={`p-1.5 rounded-md transition-all duration-200 ${
-              previewVisible
+            className={`p-1.5 rounded-md transition-all duration-200 ${previewVisible
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-            }`}
+              }`}
             title="Preview"
           >
             <Eye className="h-3.5 w-3.5" />
@@ -459,11 +456,10 @@ const Index = () => {
               if (rightPanel === "chat" && chatVisible) setChatVisible(false);
               else { setRightPanel("chat"); setChatVisible(true); }
             }}
-            className={`p-1.5 rounded-md transition-all duration-200 ${
-              rightPanel === "chat" && chatVisible
+            className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "chat" && chatVisible
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-            }`}
+              }`}
           >
             <MessageSquare className="h-3.5 w-3.5" />
           </button>
@@ -472,11 +468,10 @@ const Index = () => {
               if (rightPanel === "github" && chatVisible) setChatVisible(false);
               else { setRightPanel("github"); setChatVisible(true); }
             }}
-            className={`p-1.5 rounded-md transition-all duration-200 ${
-              rightPanel === "github" && chatVisible
+            className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "github" && chatVisible
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-            }`}
+              }`}
           >
             <Github className="h-3.5 w-3.5" />
           </button>
@@ -485,11 +480,10 @@ const Index = () => {
               if (rightPanel === "git" && chatVisible) setChatVisible(false);
               else { setRightPanel("git"); setChatVisible(true); }
             }}
-            className={`p-1.5 rounded-md transition-all duration-200 ${
-              rightPanel === "git" && chatVisible
+            className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "git" && chatVisible
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-            }`}
+              }`}
             title="Git"
           >
             <GitBranch className="h-3.5 w-3.5" />

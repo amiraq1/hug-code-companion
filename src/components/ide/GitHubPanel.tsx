@@ -44,13 +44,7 @@ export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
   const [committing, setCommitting] = useState(false);
   const [view, setView] = useState<"repos" | "browser" | "commit">("repos");
 
-  useEffect(() => {
-    if (connected && view === "repos") {
-      loadRepos();
-    }
-  }, [connected]);
-
-  const loadRepos = async () => {
+  const loadRepos = useCallback(async () => {
     setLoading(true);
     try {
       const data = await listRepos();
@@ -59,7 +53,13 @@ export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
       setRepos([]);
     }
     setLoading(false);
-  };
+  }, [listRepos]);
+
+  useEffect(() => {
+    if (connected && view === "repos") {
+      loadRepos();
+    }
+  }, [connected, view, loadRepos]);
 
   const browseRepo = async (repo: GitHubRepo) => {
     setSelectedRepo(repo);

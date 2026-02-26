@@ -31,6 +31,7 @@ export interface EditorSettings {
   bracketPairs: boolean;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
   fontSize: 13,
   tabSize: 2,
@@ -77,11 +78,10 @@ export function SettingsScreen({ onBack, editorSettings, onSettingsChange }: Set
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 md:gap-3 px-4 py-2 md:py-2.5 text-sm transition-all duration-150 whitespace-nowrap ${
-                tab === t.id
+              className={`flex items-center gap-2 md:gap-3 px-4 py-2 md:py-2.5 text-sm transition-all duration-150 whitespace-nowrap ${tab === t.id
                   ? "text-primary bg-primary/5 md:border-r-2 md:border-r-primary border-b-2 md:border-b-0 border-b-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
-              }`}
+                }`}
             >
               {t.icon}
               {t.label}
@@ -133,11 +133,10 @@ export function SettingsScreen({ onBack, editorSettings, onSettingsChange }: Set
                       <button
                         key={size}
                         onClick={() => updateSetting("tabSize", size)}
-                        className={`px-3 py-1.5 text-xs font-mono transition-colors ${
-                          editorSettings.tabSize === size
+                        className={`px-3 py-1.5 text-xs font-mono transition-colors ${editorSettings.tabSize === size
                             ? "bg-primary/10 text-primary"
                             : "text-muted-foreground hover:text-foreground"
-                        }`}
+                          }`}
                       >
                         {size}
                       </button>
@@ -319,14 +318,12 @@ function ToggleSetting({
     <SettingRow icon={icon} label={label} description={description}>
       <button
         onClick={() => onChange(!value)}
-        className={`w-10 h-5 rounded-full relative transition-colors duration-200 ${
-          value ? "bg-primary" : "bg-secondary"
-        }`}
+        className={`w-10 h-5 rounded-full relative transition-colors duration-200 ${value ? "bg-primary" : "bg-secondary"
+          }`}
       >
         <div
-          className={`absolute top-0.5 w-4 h-4 rounded-full bg-background shadow transition-transform duration-200 ${
-            value ? "translate-x-5" : "translate-x-0.5"
-          }`}
+          className={`absolute top-0.5 w-4 h-4 rounded-full bg-background shadow transition-transform duration-200 ${value ? "translate-x-5" : "translate-x-0.5"
+            }`}
         />
       </button>
     </SettingRow>

@@ -164,7 +164,7 @@ export function useAuthStore() {
     setState(prev => ({ ...prev, status: "loading" }));
 
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`,
         {
@@ -184,7 +184,7 @@ export function useAuthStore() {
         clearCachedAuth();
         setState(prev => ({ ...prev, status: "unauthenticated", username: null, error: null }));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const cached = getCachedAuth();
       if (cached) {
         setState(prev => ({ ...prev, status: "authenticated", username: cached.username, error: null }));
@@ -192,7 +192,7 @@ export function useAuthStore() {
         setState(prev => ({
           ...prev,
           status: "error",
-          error: { type: "server", message: err.message || "فشل التحقق من حالة المصادقة", timestamp: Date.now() },
+          error: { type: "server", message: (err as Error).message || "فشل التحقق من حالة المصادقة", timestamp: Date.now() },
         }));
       }
     }
@@ -244,7 +244,7 @@ export function useAuthStore() {
   // Connect — initiate OAuth with CSRF
   const connect = useCallback(() => {
     const csrf = generateCsrfToken();
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
     const redirectUri = window.location.origin;
     window.location.href = `https://${projectId}.supabase.co/functions/v1/github-auth/authorize?session_id=${sessionId}&redirect_uri=${encodeURIComponent(redirectUri)}&csrf_token=${csrf}`;
   }, [sessionId]);
@@ -253,7 +253,7 @@ export function useAuthStore() {
   const disconnect = useCallback(async () => {
     setState(prev => ({ ...prev, status: "loading" }));
     try {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
       await fetch(`https://${projectId}.supabase.co/functions/v1/github-auth/disconnect`, {
         method: "POST",
         headers: {

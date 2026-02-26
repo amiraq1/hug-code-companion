@@ -63,13 +63,13 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "public" | "private">("all");
 
-  const loadRepos = async () => {
+  const loadRepos = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await listRepos();
       if (Array.isArray(data)) setRepos(data);
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e instanceof GitHubError) {
         setError(e.message);
       } else {
@@ -78,11 +78,11 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
       setRepos([]);
     }
     setLoading(false);
-  };
+  }, [listRepos]);
 
   useEffect(() => {
     if (connected && online) loadRepos();
-  }, [connected, online]);
+  }, [connected, online, loadRepos]);
 
   const filtered = useMemo(() => {
     let result = repos;
@@ -143,11 +143,10 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-2 text-xs font-medium capitalize transition-colors ${
-                  filter === f
+                className={`px-3 py-2 text-xs font-medium capitalize transition-colors ${filter === f
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-                }`}
+                  }`}
               >
                 {f}
               </button>

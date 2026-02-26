@@ -161,14 +161,16 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) accumulated += content;
-          } catch {}
+          } catch {
+            // Ignore parse error
+          }
         }
       }
 
       onStreamMessage(assistantId, accumulated || "...", true);
-    } catch (e: any) {
-      if (e.name !== "AbortError") {
-        onStreamMessage(assistantId, `⚠️ خطأ: ${e.message}`, true);
+    } catch (e: unknown) {
+      if ((e as Error).name !== "AbortError") {
+        onStreamMessage(assistantId, `⚠️ خطأ: ${(e as Error).message}`, true);
       }
     } finally {
       setIsStreaming(false);
@@ -207,11 +209,10 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
               </div>
             )}
             <div
-              className={`rounded-lg px-3 py-2.5 text-[13px] leading-relaxed max-w-[85%] ${
-                msg.role === "user"
-                  ? "bg-primary/10 text-foreground border border-primary/10"
-                  : "bg-secondary/60 text-secondary-foreground"
-              }`}
+              className={`rounded-lg px-3 py-2.5 text-[13px] leading-relaxed max-w-[85%] ${msg.role === "user"
+                ? "bg-primary/10 text-foreground border border-primary/10"
+                : "bg-secondary/60 text-secondary-foreground"
+                }`}
             >
               {msg.role === "assistant" ? (
                 <div className="prose prose-sm prose-invert max-w-none [&_p]:m-0 [&_pre]:bg-background/80 [&_pre]:p-2.5 [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_code]:text-primary/80 [&_code]:text-[11px] [&_code]:font-mono">
