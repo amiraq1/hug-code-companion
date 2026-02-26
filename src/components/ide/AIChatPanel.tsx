@@ -17,6 +17,7 @@ interface AIChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (content: string) => void;
   onStreamMessage?: (id: string, content: string, done: boolean) => void;
+  onInsertCode?: (code: string) => void;
   projectContext?: ProjectContext;
 }
 
