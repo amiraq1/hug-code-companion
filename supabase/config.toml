@@ -1,1 +1,7 @@
 project_id = "gcbkeduwpibuddmirqwz"
+
+[functions.github-auth]
+verify_jwt = false
+
+[functions.github-api]
+verify_jwt = false

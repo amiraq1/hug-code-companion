@@ -6,7 +6,8 @@ import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
 import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
-import { Code2, MessageSquare, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github } from "lucide-react";
+import { GitHubPanel } from "@/components/ide/GitHubPanel";
 
 const Index = () => {
   const [files, setFiles] = useState<FileNode[]>(DEFAULT_FILES);
@@ -14,6 +15,7 @@ const Index = () => {
   const [openFilePaths, setOpenFilePaths] = useState<string[]>(["src/App.tsx"]);
   const [chatVisible, setChatVisible] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [rightPanel, setRightPanel] = useState<"chat" | "github">("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -95,10 +97,16 @@ const Index = () => {
           {sidebarVisible ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeft className="h-3.5 w-3.5" />}
         </button>
         <button
-          onClick={() => setChatVisible(!chatVisible)}
-          className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+          onClick={() => { setRightPanel("chat"); setChatVisible(true); }}
+          className={`p-1 rounded hover:bg-secondary transition-colors ${rightPanel === "chat" && chatVisible ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
         >
           <MessageSquare className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => { setRightPanel("github"); setChatVisible(true); }}
+          className={`p-1 rounded hover:bg-secondary transition-colors ${rightPanel === "github" && chatVisible ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <Github className="h-3.5 w-3.5" />
         </button>
       </div>
 
@@ -125,7 +133,11 @@ const Index = () => {
         {/* Chat Panel */}
         {chatVisible && (
           <div className="w-80 shrink-0">
-            <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+            {rightPanel === "chat" ? (
+              <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+            ) : (
+              <GitHubPanel />
+            )}
           </div>
         )}
       </div>
