@@ -7,8 +7,9 @@ import { StatusBar } from "@/components/ide/StatusBar";
 import { CommitDialog } from "@/components/ide/CommitDialog";
 import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
-import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github, Eye } from "lucide-react";
+import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github, Eye, GitBranch } from "lucide-react";
 import { PreviewPanel } from "@/components/ide/PreviewPanel";
+import { GitPanel } from "@/components/ide/GitPanel";
 import { GitHubPanel } from "@/components/ide/GitHubPanel";
 import { useGitHub } from "@/hooks/useGitHub";
 
