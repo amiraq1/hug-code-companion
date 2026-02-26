@@ -15,7 +15,11 @@ import {
 } from "lucide-react";
 import { useGitHub, type GitHubRepo, type GitHubContent } from "@/hooks/useGitHub";
 
-export function GitHubPanel() {
+interface GitHubPanelProps {
+  onFileOpen?: (path: string, content: string, language: string) => void;
+}
+
+export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
   const {
     connected,
     username,
