@@ -201,6 +201,15 @@ const Index = () => {
         language={activeFile?.language || ""}
         lineCount={lineCount}
       />
+
+      {/* Commit Dialog */}
+      {commitDialogPath && (
+        <CommitDialog
+          filePath={commitDialogPath}
+          onCommit={handleCommitGitHubFile}
+          onClose={() => setCommitDialogPath(null)}
+        />
+      )}
     </div>
   );
 };
