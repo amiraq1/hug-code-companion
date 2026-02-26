@@ -4,10 +4,12 @@ import { CodeEditor } from "@/components/ide/CodeEditor";
 import { AIChatPanel } from "@/components/ide/AIChatPanel";
 import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
+import { CommitDialog } from "@/components/ide/CommitDialog";
 import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
 import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github } from "lucide-react";
 import { GitHubPanel } from "@/components/ide/GitHubPanel";
+import { useGitHub } from "@/hooks/useGitHub";
 
 const Index = () => {
   const [files, setFiles] = useState<FileNode[]>(DEFAULT_FILES);
