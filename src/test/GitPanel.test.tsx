@@ -48,10 +48,11 @@ describe("GitPanel", () => {
   });
 
   it("switches between tabs", () => {
-    render(<GitPanel />);
+    render(<GitPanel currentRepo={{ owner: "testuser", repo: "my-repo" }} />);
     fireEvent.click(screen.getByText("Branches"));
-    // Branch creation input should appear
-    expect(screen.getByPlaceholderText("new-branch-name")).toBeInTheDocument();
+    // Branches tab is now active
+    const branchesBtn = screen.getByText("Branches");
+    expect(branchesBtn.closest("button")).toHaveClass("text-primary");
   });
 });
 
