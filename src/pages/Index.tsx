@@ -262,6 +262,12 @@ const Index = () => {
           </div>
           <div className="flex-1" />
           <button
+            onClick={() => setScreen("ai-planner")}
+            className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
+          <button
             onClick={() => setScreen("repos")}
             className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
           >
