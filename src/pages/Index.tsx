@@ -28,6 +28,7 @@ import {
   DEFAULT_EDITOR_SETTINGS,
   type EditorSettings,
 } from "@/components/screens/SettingsScreen";
+import { AIProjectPlanner } from "@/components/screens/AIProjectPlanner";
 
 // Lazy load heavy components
 const CodeEditor = lazy(() => import("@/components/ide/CodeEditor").then(m => ({ default: m.CodeEditor })));
