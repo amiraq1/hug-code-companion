@@ -147,16 +147,23 @@ const Index = () => {
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMsg]);
-    setTimeout(() => {
-      const aiMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: generateResponse(content),
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-    }, 800);
   }, []);
+
+  const handleStreamMessage = useCallback((id: string, content: string, done: boolean) => {
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.id === id) {
+        return prev.map((m) => (m.id === id ? { ...m, content } : m));
+      }
+      return [...prev, { id, role: "assistant" as const, content, timestamp: new Date() }];
+    });
+  }, []);
+
+  const projectContext = useMemo(() => ({
+    active_file: activeFile ? { path: activeFile.path, content: activeFile.content, language: activeFile.language } : null,
+    open_files: openFilePaths,
+    file_tree: files.map((f) => f.name).join(", "),
+  }), [activeFile, openFilePaths, files]);
 
   const handleGitHubFileOpen = useCallback(
     (path: string, content: string, language: string) => {
