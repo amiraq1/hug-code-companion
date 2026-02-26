@@ -1,47 +1,169 @@
 apply plugin: 'com.android.application'
 
+def appVersionCode = (project.findProperty("APP_VERSION_CODE") ?: System.getenv("APP_VERSION_CODE") ?: "1").toInteger()
+def appVersionName = project.findProperty("APP_VERSION_NAME") ?: System.getenv("APP_VERSION_NAME") ?: "1.0.0"
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def signingStoreFilePath = keystoreProperties.getProperty("storeFile") ?: System.getenv("ANDROID_KEYSTORE_PATH")
+def signingStorePassword = keystoreProperties.getProperty("storePassword") ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def signingKeyAlias = keystoreProperties.getProperty("keyAlias") ?: System.getenv("ANDROID_KEY_ALIAS")
+def signingKeyPassword = keystoreProperties.getProperty("keyPassword") ?: System.getenv("ANDROID_KEY_PASSWORD")
+def hasReleaseSigning = signingStoreFilePath && signingStorePassword && signingKeyAlias && signingKeyPassword
+
+gradle.taskGraph.whenReady { taskGraph ->
+    def secureBuildTasks = taskGraph.allTasks.findAll { task ->
+        def taskName = task.name.toLowerCase()
+        taskName.contains("release") || taskName.contains("staging")
+    }
+    if (!hasReleaseSigning && !secureBuildTasks.isEmpty()) {
+        throw new GradleException(
+            "Release/Staging builds require signing credentials. " +
+            "Set android/keystore.properties or ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, " +
+            "ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD."
+        )
+    }
+}
+
 android {
     namespace = "app.lovable.b18996c477644e5c8e878b0ec5e83922"
     compileSdk = rootProject.ext.compileSdkVersion
+
     defaultConfig {
         applicationId "app.lovable.b18996c477644e5c8e878b0ec5e83922"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode appVersionCode
+        versionName appVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86_64"
+        }
+
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+            // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+
     signingConfigs {
-        release {
-            def keystorePropertiesFile = rootProject.file("keystore.properties")
-            if (keystorePropertiesFile.exists()) {
-                def keystoreProperties = new Properties()
-                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-                storeFile = file(keystoreProperties['storeFile'])
-                storePassword = keystoreProperties['storePassword']
-                keyAlias = keystoreProperties['keyAlias']
-                keyPassword = keystoreProperties['keyPassword']
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(signingStoreFilePath)
+                storePassword signingStorePassword
+                keyAlias signingKeyAlias
+                keyPassword signingKeyPassword
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+                enableV4Signing true
             }
         }
     }
 
+    flavorDimensions += "environment"
+    productFlavors {
+        dev {
+            dimension "environment"
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+            buildConfigField "String", "API_ENVIRONMENT", "\"dev\""
+        }
+        prod {
+            dimension "environment"
+            buildConfigField "String", "API_ENVIRONMENT", "\"prod\""
+        }
+    }
+
     buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            minifyEnabled false
+            shrinkResources false
+            buildConfigField "boolean", "ENABLE_DEBUG_LOGS", "true"
+        }
+
         release {
+            debuggable false
             minifyEnabled true
             shrinkResources true
+            buildConfigField "boolean", "ENABLE_DEBUG_LOGS", "false"
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            
-            // Only apply signing if keystore properties exist, else allow unsigned build
-            def keystoreFile = rootProject.file("keystore.properties")
-            if (keystoreFile.exists()) {
+            if (hasReleaseSigning) {
                 signingConfig signingConfigs.release
             }
         }
+
+        staging {
+            initWith release
+            matchingFallbacks = ['release']
+            applicationIdSuffix ".staging"
+            versionNameSuffix "-staging"
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    def enableAbiSplits = (project.findProperty("ENABLE_ABI_SPLITS") ?: System.getenv("ENABLE_ABI_SPLITS") ?: "true").toBoolean()
+    splits {
+        abi {
+            enable enableAbiSplits
+            reset()
+            include "arm64-v8a", "armeabi-v7a", "x86_64"
+            universalApk true
+        }
+    }
+
+    bundle {
+        language {
+            // Keep all locales in a single split to avoid runtime missing resources on dynamic locale switches.
+            enableSplit = false
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += [
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*",
+                "META-INF/*.kotlin_module"
+            ]
+        }
+    }
+}
+
+tasks.register("sizeReport") {
+    group = "reporting"
+    description = "Generates APK/AAB size report for release artifacts."
+    dependsOn("assembleProdRelease", "bundleProdRelease")
+    doLast {
+        def reportDir = rootProject.file("build/reports/release")
+        reportDir.mkdirs()
+        def reportFile = new File(reportDir, "artifact-size-report.txt")
+        def artifacts = fileTree(dir: "${buildDir}/outputs", include: ["**/*.apk", "**/*.aab"]).files.sort { it.name }
+        reportFile.withWriter("UTF-8") { writer ->
+            writer.println("Android Artifact Size Report")
+            writer.println("Generated: ${new Date()}")
+            writer.println("")
+            if (artifacts.isEmpty()) {
+                writer.println("No APK/AAB artifacts were found.")
+            } else {
+                artifacts.each { artifact ->
+                    def relativePath = rootProject.relativePath(artifact)
+                    def sizeMb = artifact.length() / (1024.0 * 1024.0)
+                    writer.println(String.format("%-90s %10.2f MB", relativePath, sizeMb))
+                }
+            }
+        }
+        println("Size report generated: ${reportFile}")
     }
 }
 

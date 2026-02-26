@@ -1,0 +1,104 @@
+name: Android Release
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION_CODE: ${{ vars.APP_VERSION_CODE || '1' }}
+      APP_VERSION_NAME: ${{ vars.APP_VERSION_NAME || '1.0.0' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Validate signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing required secret: $key"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Prepare keystore.properties
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          mkdir -p android/secure
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/secure/upload-keystore.jks
+          cat > android/keystore.properties <<EOF
+          storeFile=../secure/upload-keystore.jks
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+
+      - name: Build signed prodRelease (APK + AAB)
+        run: |
+          cd android
+          ./gradlew --no-daemon clean assembleProdRelease bundleProdRelease app:sizeReport --console=plain \
+            -PAPP_VERSION_CODE="$APP_VERSION_CODE" \
+            -PAPP_VERSION_NAME="$APP_VERSION_NAME"
+
+      - name: Verify zipalign and signatures
+        run: |
+          BUILD_TOOLS="$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n1)"
+          ZIPALIGN="$ANDROID_HOME/build-tools/$BUILD_TOOLS/zipalign"
+          APKSIGNER="$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner"
+          shopt -s nullglob
+          for apk in android/app/build/outputs/apk/prod/release/*.apk; do
+            "$ZIPALIGN" -c -v 4 "$apk"
+            "$APKSIGNER" verify --verbose "$apk"
+          done
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-prod-release-v${{ env.APP_VERSION_NAME }}-${{ github.run_number }}
+          if-no-files-found: error
+          path: |
+            android/app/build/outputs/apk/prod/release/*.apk
+            android/app/build/outputs/bundle/prodRelease/*.aab
+            android/build/reports/release/artifact-size-report.txt
