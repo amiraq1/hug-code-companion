@@ -19,6 +19,7 @@ const Index = () => {
   const [chatVisible, setChatVisible] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [rightPanel, setRightPanel] = useState<"chat" | "github">("chat");
+  const [previewVisible, setPreviewVisible] = useState(false);
   const [commitDialogPath, setCommitDialogPath] = useState<string | null>(null);
   const { commitFile } = useGitHub();
   const [messages, setMessages] = useState<ChatMessage[]>([
