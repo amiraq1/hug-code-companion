@@ -1,7 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, lazy, Suspense } from "react";
 import { FileExplorer } from "@/components/ide/FileExplorer";
-import { CodeEditor } from "@/components/ide/CodeEditor";
-import { AIChatPanel } from "@/components/ide/AIChatPanel";
 import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
 import { CommitDialog } from "@/components/ide/CommitDialog";
@@ -16,10 +14,8 @@ import {
   GitBranch,
   Settings,
   FolderGit2,
+  Loader2,
 } from "lucide-react";
-import { PreviewPanel } from "@/components/ide/PreviewPanel";
-import { GitPanel } from "@/components/ide/GitPanel";
-import { GitHubPanel } from "@/components/ide/GitHubPanel";
 import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
 import { LoginScreen } from "@/components/screens/LoginScreen";
 import { ReposScreen } from "@/components/screens/ReposScreen";
@@ -28,6 +24,19 @@ import {
   DEFAULT_EDITOR_SETTINGS,
   type EditorSettings,
 } from "@/components/screens/SettingsScreen";
+
+// Lazy load heavy components
+const CodeEditor = lazy(() => import("@/components/ide/CodeEditor").then(m => ({ default: m.CodeEditor })));
+const AIChatPanel = lazy(() => import("@/components/ide/AIChatPanel").then(m => ({ default: m.AIChatPanel })));
+const GitHubPanel = lazy(() => import("@/components/ide/GitHubPanel").then(m => ({ default: m.GitHubPanel })));
+const GitPanel = lazy(() => import("@/components/ide/GitPanel").then(m => ({ default: m.GitPanel })));
+const PreviewPanel = lazy(() => import("@/components/ide/PreviewPanel").then(m => ({ default: m.PreviewPanel })));
+
+const LazyFallback = () => (
+  <div className="flex-1 flex items-center justify-center bg-ide-editor">
+    <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+  </div>
+);
 
 type AppScreen = "login" | "repos" | "editor" | "settings";
 
@@ -43,7 +52,7 @@ const Index = () => {
   const [commitDialogPath, setCommitDialogPath] = useState<string | null>(null);
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(DEFAULT_EDITOR_SETTINGS);
   const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
-  const { commitFile } = useGitHub();
+  const { commitFile, online } = useGitHub();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -59,8 +68,6 @@ const Index = () => {
   const openFiles = openFilePaths
     .map((p) => allFiles.find((f) => f.path === p))
     .filter(Boolean) as FileNode[];
-
-  // ── Handlers ──
 
   const handleFileSelect = useCallback((path: string) => {
     setActiveFilePath(path);
@@ -160,15 +167,13 @@ const Index = () => {
   const handleSelectRepo = useCallback((repo: GitHubRepo) => {
     setSelectedGitHubRepo(repo);
     setScreen("editor");
-    // Auto-switch to GitHub panel
     setRightPanel("github");
     setChatVisible(true);
   }, []);
 
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
-  // ── Screen Router ──
-
+  // Screen Router
   if (screen === "login") {
     return <LoginScreen onContinue={() => setScreen("editor")} />;
   }
@@ -192,8 +197,6 @@ const Index = () => {
     );
   }
 
-  // ── Editor Screen ──
-
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background grain-overlay">
       {/* Title Bar */}
@@ -206,7 +209,6 @@ const Index = () => {
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-0.5">
-          {/* Repos */}
           <button
             onClick={() => setScreen("repos")}
             className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
@@ -214,7 +216,6 @@ const Index = () => {
           >
             <FolderGit2 className="h-3.5 w-3.5" />
           </button>
-          {/* Settings */}
           <button
             onClick={() => setScreen("settings")}
             className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
@@ -223,7 +224,6 @@ const Index = () => {
             <Settings className="h-3.5 w-3.5" />
           </button>
           <div className="w-px h-4 bg-border mx-1" />
-          {/* Sidebar Toggle */}
           <button
             onClick={() => setSidebarVisible(!sidebarVisible)}
             className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
@@ -235,7 +235,6 @@ const Index = () => {
             )}
           </button>
           <div className="w-px h-4 bg-border mx-1" />
-          {/* Preview */}
           <button
             onClick={() => setPreviewVisible(!previewVisible)}
             className={`p-1.5 rounded-md transition-all duration-200 ${
@@ -247,15 +246,10 @@ const Index = () => {
           >
             <Eye className="h-3.5 w-3.5" />
           </button>
-          {/* Chat */}
           <button
             onClick={() => {
-              if (rightPanel === "chat" && chatVisible) {
-                setChatVisible(false);
-              } else {
-                setRightPanel("chat");
-                setChatVisible(true);
-              }
+              if (rightPanel === "chat" && chatVisible) setChatVisible(false);
+              else { setRightPanel("chat"); setChatVisible(true); }
             }}
             className={`p-1.5 rounded-md transition-all duration-200 ${
               rightPanel === "chat" && chatVisible
@@ -265,15 +259,10 @@ const Index = () => {
           >
             <MessageSquare className="h-3.5 w-3.5" />
           </button>
-          {/* GitHub */}
           <button
             onClick={() => {
-              if (rightPanel === "github" && chatVisible) {
-                setChatVisible(false);
-              } else {
-                setRightPanel("github");
-                setChatVisible(true);
-              }
+              if (rightPanel === "github" && chatVisible) setChatVisible(false);
+              else { setRightPanel("github"); setChatVisible(true); }
             }}
             className={`p-1.5 rounded-md transition-all duration-200 ${
               rightPanel === "github" && chatVisible
@@ -283,15 +272,10 @@ const Index = () => {
           >
             <Github className="h-3.5 w-3.5" />
           </button>
-          {/* Git */}
           <button
             onClick={() => {
-              if (rightPanel === "git" && chatVisible) {
-                setChatVisible(false);
-              } else {
-                setRightPanel("git");
-                setChatVisible(true);
-              }
+              if (rightPanel === "git" && chatVisible) setChatVisible(false);
+              else { setRightPanel("git"); setChatVisible(true); }
             }}
             className={`p-1.5 rounded-md transition-all duration-200 ${
               rightPanel === "git" && chatVisible
@@ -307,7 +291,6 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
         {sidebarVisible && (
           <div className="w-56 shrink-0 animate-fade-in">
             <FileExplorer
@@ -318,7 +301,6 @@ const Index = () => {
           </div>
         )}
 
-        {/* Editor Area */}
         <div className="flex-1 flex flex-col min-w-0">
           <TabBar
             openFiles={openFiles}
@@ -327,42 +309,45 @@ const Index = () => {
             onTabClose={handleTabClose}
             onCommitFile={setCommitDialogPath}
           />
-          <CodeEditor
-            file={activeFile}
-            onContentChange={handleContentChange}
-            settings={editorSettings}
-          />
+          <Suspense fallback={<LazyFallback />}>
+            <CodeEditor
+              file={activeFile}
+              onContentChange={handleContentChange}
+              settings={editorSettings}
+            />
+          </Suspense>
         </div>
 
-        {/* Preview Panel */}
         {previewVisible && (
           <div className="w-[45%] shrink-0 animate-slide-in-right">
-            <PreviewPanel file={activeFile} />
+            <Suspense fallback={<LazyFallback />}>
+              <PreviewPanel file={activeFile} />
+            </Suspense>
           </div>
         )}
 
-        {/* Right Panel */}
         {chatVisible && (
           <div className="w-80 shrink-0 animate-slide-in-right h-full">
-            {rightPanel === "chat" ? (
-              <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
-            ) : rightPanel === "github" ? (
-              <GitHubPanel onFileOpen={handleGitHubFileOpen} />
-            ) : (
-              <GitPanel />
-            )}
+            <Suspense fallback={<LazyFallback />}>
+              {rightPanel === "chat" ? (
+                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+              ) : rightPanel === "github" ? (
+                <GitHubPanel onFileOpen={handleGitHubFileOpen} />
+              ) : (
+                <GitPanel />
+              )}
+            </Suspense>
           </div>
         )}
       </div>
 
-      {/* Status Bar */}
       <StatusBar
         activeFile={activeFilePath}
         language={activeFile?.language || ""}
         lineCount={lineCount}
+        online={online}
       />
 
-      {/* Commit Dialog */}
       {commitDialogPath && (
         <CommitDialog
           filePath={commitDialogPath}

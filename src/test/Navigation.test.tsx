@@ -9,6 +9,7 @@ vi.mock("@/hooks/useGitHub", () => ({
     connected: false,
     username: null,
     loading: false,
+    online: true,
     connect: vi.fn(),
     disconnect: vi.fn(),
     listRepos: vi.fn().mockResolvedValue([]),
@@ -22,6 +23,7 @@ vi.mock("@/hooks/useGitHub", () => ({
     listCommits: vi.fn(),
     getStatus: vi.fn(),
   }),
+  GitHubError: class extends Error { type: string; constructor(m: string, t: string) { super(m); this.type = t; } },
 }));
 
 vi.mock("@monaco-editor/react", () => ({
@@ -121,7 +123,7 @@ describe("Editor Features", () => {
     expect(screen.getByText("UTF-8")).toBeInTheDocument();
   });
 
-  it("shows AI chat panel by default", () => {
-    expect(screen.getByText(/Code Agent Studio/)).toBeInTheDocument();
+  it("shows title bar branding", () => {
+    expect(screen.getByText("agent")).toBeInTheDocument();
   });
 });

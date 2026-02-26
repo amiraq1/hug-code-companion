@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import {
   GitBranch,
   GitCommitHorizontal,
-  GitPullRequest,
   Plus,
   Trash2,
   RefreshCw,
@@ -13,13 +12,12 @@ import {
   FilePlus,
   FileMinus,
   Clock,
-  ArrowUpCircle,
-  ArrowDownCircle,
   AlertTriangle,
   ChevronDown,
   Github,
+  WifiOff,
 } from "lucide-react";
-import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
+import { useGitHub, type GitHubRepo, GitHubError } from "@/hooks/useGitHub";
 
 type GitTab = "status" | "branches" | "log";
 
@@ -27,11 +25,41 @@ interface GitPanelProps {
   currentRepo?: { owner: string; repo: string } | null;
 }
 
+/** Memoized commit item */
+const CommitItem = memo(function CommitItem({ commit, isFirst, isLast }: {
+  commit: { sha: string; commit: { message: string; author: { name: string; date: string } }; author?: { login: string } | null };
+  isFirst: boolean;
+  isLast: boolean;
+}) {
+  return (
+    <div className="px-3 py-2 border-b border-border/30 hover:bg-secondary/20 transition-colors">
+      <div className="flex items-start gap-2">
+        <div className="mt-1.5 shrink-0 flex flex-col items-center">
+          <div className={`w-2 h-2 rounded-full ${isFirst ? "bg-primary" : "bg-muted-foreground/30"}`} />
+          {!isLast && <div className="w-px h-6 bg-border mt-0.5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-foreground leading-snug line-clamp-2">{commit.commit.message}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-[10px] text-muted-foreground font-mono">{commit.sha.slice(0, 7)}</span>
+            <span className="text-[10px] text-muted-foreground">{commit.author?.login || commit.commit.author.name}</span>
+            <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-1">
+              <Clock className="h-2.5 w-2.5" />
+              {formatRelativeTime(commit.commit.author.date)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export function GitPanel({ currentRepo }: GitPanelProps) {
   const {
     connected,
     username,
     loading: authLoading,
+    online,
     connect,
     listRepos,
     listBranches,
@@ -48,38 +76,31 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Status
   const [statusFiles, setStatusFiles] = useState<Array<{ filename: string; status: string; additions: number; deletions: number }>>([]);
-
-  // Branches
   const [branches, setBranches] = useState<Array<{ name: string; commit: { sha: string } }>>([]);
   const [activeBranch, setActiveBranch] = useState("main");
   const [newBranchName, setNewBranchName] = useState("");
   const [creatingBranch, setCreatingBranch] = useState(false);
-
-  // Commits
   const [commits, setCommits] = useState<Array<{
     sha: string;
     commit: { message: string; author: { name: string; date: string } };
     author?: { login: string; avatar_url: string } | null;
   }>>([]);
 
-  // Load repos on connect
   useEffect(() => {
-    if (connected) {
+    if (connected && online) {
       listRepos().then((data) => {
         if (Array.isArray(data)) setRepos(data);
-      });
+      }).catch(() => {});
     }
-  }, [connected, listRepos]);
+  }, [connected, online, listRepos]);
 
-  // Auto-select repo
   useEffect(() => {
     if (currentRepo) setSelectedRepo(currentRepo);
   }, [currentRepo]);
 
   const refresh = useCallback(async () => {
-    if (!selectedRepo) return;
+    if (!selectedRepo || !online) return;
     setLoading(true);
     setError(null);
     try {
@@ -94,10 +115,11 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
         if (Array.isArray(data)) setCommits(data);
       }
     } catch (e: any) {
-      setError(e.message || "Failed to load data");
+      const msg = e instanceof GitHubError ? e.message : "Failed to load data";
+      setError(msg);
     }
     setLoading(false);
-  }, [selectedRepo, tab, activeBranch, getStatus, listBranches, listCommits]);
+  }, [selectedRepo, tab, activeBranch, online, getStatus, listBranches, listCommits]);
 
   useEffect(() => {
     if (selectedRepo) refresh();
@@ -106,23 +128,25 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
   const handleCreateBranch = async () => {
     if (!selectedRepo || !newBranchName.trim()) return;
     setCreatingBranch(true);
+    setError(null);
     try {
       await createBranch(selectedRepo.owner, selectedRepo.repo, newBranchName.trim(), activeBranch);
       setNewBranchName("");
       await refresh();
     } catch (e: any) {
-      setError(e.message || "Failed to create branch");
+      setError(e instanceof GitHubError ? e.message : "Failed to create branch");
     }
     setCreatingBranch(false);
   };
 
   const handleDeleteBranch = async (branch: string) => {
     if (!selectedRepo) return;
+    setError(null);
     try {
       await deleteBranch(selectedRepo.owner, selectedRepo.repo, branch);
       await refresh();
     } catch (e: any) {
-      setError(e.message || "Failed to delete branch");
+      setError(e instanceof GitHubError ? e.message : "Failed to delete branch");
     }
   };
 
@@ -133,7 +157,6 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
     setActiveBranch(repo.default_branch || "main");
   };
 
-  // Not connected
   if (authLoading) {
     return (
       <div className="h-full bg-ide-panel flex items-center justify-center">
@@ -180,6 +203,14 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
 
   return (
     <div className="h-full bg-ide-panel flex flex-col">
+      {/* Offline banner */}
+      {!online && (
+        <div className="px-3 py-1.5 bg-destructive/10 border-b border-destructive/20 flex items-center gap-2 shrink-0">
+          <WifiOff className="h-3 w-3 text-destructive" />
+          <span className="text-[10px] text-destructive font-medium">Offline</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="px-3 py-2 border-b border-border flex items-center gap-2 shrink-0">
         <GitBranch className="h-3.5 w-3.5 text-primary" />
@@ -233,7 +264,8 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
         ))}
         <button
           onClick={refresh}
-          className="px-2 py-2 text-muted-foreground hover:text-foreground transition-colors"
+          disabled={!online}
+          className="px-2 py-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
           title="Refresh"
         >
           <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
@@ -265,7 +297,6 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
           </div>
         )}
 
-        {/* STATUS TAB */}
         {!loading && selectedRepo && tab === "status" && (
           <div className="py-1">
             <div className="px-3 py-2 flex items-center gap-2 border-b border-border/50">
@@ -279,10 +310,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
               </div>
             ) : (
               statusFiles.map((f, i) => (
-                <div
-                  key={i}
-                  className="px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors"
-                >
+                <div key={i} className="px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors">
                   {statusIcon(f.status)}
                   <span className="text-xs font-mono text-foreground truncate flex-1">{f.filename}</span>
                   <span className="text-[10px] text-ide-success">+{f.additions}</span>
@@ -293,10 +321,8 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
           </div>
         )}
 
-        {/* BRANCHES TAB */}
         {!loading && selectedRepo && tab === "branches" && (
           <div className="py-1">
-            {/* Create branch */}
             <div className="px-3 py-2 border-b border-border/50 flex gap-1.5">
               <input
                 value={newBranchName}
@@ -307,7 +333,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
               />
               <button
                 onClick={handleCreateBranch}
-                disabled={creatingBranch || !newBranchName.trim()}
+                disabled={creatingBranch || !newBranchName.trim() || !online}
                 className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 transition-colors"
                 title="Create branch"
               >
@@ -321,7 +347,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
             {branches.map((b) => (
               <div
                 key={b.name}
-                className={`px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors cursor-pointer ${
+                className={`px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors cursor-pointer group ${
                   b.name === activeBranch ? "bg-primary/5" : ""
                 }`}
                 onClick={() => setActiveBranch(b.name)}
@@ -347,7 +373,6 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
           </div>
         )}
 
-        {/* LOG TAB */}
         {!loading && selectedRepo && tab === "log" && (
           <div className="py-1">
             <div className="px-3 py-1.5 flex items-center gap-2 border-b border-border/50 text-[10px] text-muted-foreground">
@@ -355,35 +380,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
               {activeBranch} · {commits.length} commits
             </div>
             {commits.map((c, i) => (
-              <div
-                key={c.sha}
-                className="px-3 py-2 border-b border-border/30 hover:bg-secondary/20 transition-colors"
-              >
-                <div className="flex items-start gap-2">
-                  {/* Timeline dot */}
-                  <div className="mt-1.5 shrink-0 flex flex-col items-center">
-                    <div className={`w-2 h-2 rounded-full ${i === 0 ? "bg-primary" : "bg-muted-foreground/30"}`} />
-                    {i < commits.length - 1 && <div className="w-px h-6 bg-border mt-0.5" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-foreground leading-snug line-clamp-2">
-                      {c.commit.message}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        {c.sha.slice(0, 7)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {c.author?.login || c.commit.author.name}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-1">
-                        <Clock className="h-2.5 w-2.5" />
-                        {formatRelativeTime(c.commit.author.date)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <CommitItem key={c.sha} commit={c} isFirst={i === 0} isLast={i === commits.length - 1} />
             ))}
           </div>
         )}
