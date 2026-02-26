@@ -341,7 +341,7 @@ const Index = () => {
           ]).map(({ id, icon: Icon, label }) => (
             <button
               key={id}
-              onClick={() => setMobileTab(id)}
+              onClick={() => switchToTab(id)}
               className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[3rem] ${
                 mobileTab === id
                   ? "text-primary"
