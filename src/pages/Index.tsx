@@ -115,6 +115,24 @@ const Index = () => {
     setOpenFilePaths((prevPaths) => (prevPaths.includes(path) ? prevPaths : [...prevPaths, path]));
   }, []);
 
+  const handleCommitGitHubFile = useCallback(async (message: string) => {
+    if (!commitDialogPath) return;
+    // Parse "github:owner/repo/path/to/file"
+    const stripped = commitDialogPath.replace("github:", "");
+    const parts = stripped.split("/");
+    const owner = parts[0];
+    const repo = parts[1];
+    const filePath = parts.slice(2).join("/");
+
+    // Get current content from files
+    const allCurrent = flattenFiles(files);
+    const file = allCurrent.find((f) => f.path === commitDialogPath);
+    if (!file?.content) return;
+
+    await commitFile(owner, repo, filePath, file.content, message);
+    setCommitDialogPath(null);
+  }, [commitDialogPath, files, commitFile]);
+
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
   return (
