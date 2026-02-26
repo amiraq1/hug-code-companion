@@ -57,7 +57,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "meta/llama-3.1-405b-instruct",
+        model: "meta/llama-3.1-70b-instruct",
         messages: [
           { role: "system", content: systemContent },
           ...messages,
@@ -81,7 +81,7 @@ serve(async (req) => {
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      throw new Error(`AI gateway error (${response.status}): ${t}`);
     }
 
     return new Response(response.body, {
@@ -90,7 +90,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("code-assist error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

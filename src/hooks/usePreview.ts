@@ -263,15 +263,14 @@ console.warn=function(...a){window.parent.postMessage({type:"preview-warning",me
 </head>
 <body>
 ${body}
-${js ? `<script>${js}</script>` : ""}
+${js ? `<script type="module">${js}</script>` : ""}
 </body>
 </html>`;
 }
 
 function buildJsRunner(code: string): string {
-  // Wrap in try/catch, redirect console.log to DOM
+  // Redirect console.log to DOM, allow top-level imports
   return `
-(function(){
   const out = document.getElementById("output");
   const _log = console.log;
   console.log = function(...args){
@@ -279,20 +278,28 @@ function buildJsRunner(code: string): string {
     const line = document.createElement("div");
     line.className = "log-line";
     line.textContent = args.map(a => typeof a==="object"?JSON.stringify(a,null,2):String(a)).join(" ");
-    out.appendChild(line);
+    if(out) out.appendChild(line);
   };
+  const _err = console.error;
   console.error = function(...args){
+    _err.apply(console,args);
     const line = document.createElement("div");
     line.className = "log-line error";
     line.textContent = "❌ " + args.join(" ");
-    out.appendChild(line);
+    if(out) out.appendChild(line);
   };
-  try {
-    ${code}
-  } catch(e) {
-    console.error(String(e));
-  }
-})();`;
+  window.addEventListener("error", function(e) {
+    if(out) {
+      const line = document.createElement("div");
+      line.className = "log-line error";
+      line.textContent = "❌ " + e.message;
+      out.appendChild(line);
+    }
+  });
+
+  // User Code:
+  ${code}
+  `;
 }
 
 function getMarkdownStyles(): string {
