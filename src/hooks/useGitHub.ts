@@ -247,6 +247,40 @@ export function useGitHub() {
     [apiCall]
   );
 
+  const compareCommits = useCallback(
+    (owner: string, repo: string, base: string, head: string) =>
+      apiCall("compare_commits", { owner, repo, base, head }) as Promise<{
+        ahead_by: number;
+        behind_by: number;
+        total_commits: number;
+        files: Array<{ filename: string; status: string; additions: number; deletions: number; patch: string }>;
+      }>,
+    [apiCall]
+  );
+
+  const getCommitDiff = useCallback(
+    (owner: string, repo: string, sha: string) =>
+      apiCall("get_commit_diff", { owner, repo, sha }) as Promise<{
+        sha: string;
+        message: string;
+        author: { name: string; date: string };
+        files: Array<{ filename: string; status: string; additions: number; deletions: number; patch: string }>;
+      }>,
+    [apiCall]
+  );
+
+  const mergeBranch = useCallback(
+    (owner: string, repo: string, base: string, head: string, message?: string) =>
+      apiCall("merge_branch", { owner, repo, base, head, message }),
+    [apiCall]
+  );
+
+  const pullStatus = useCallback(
+    (owner: string, repo: string, branch?: string) =>
+      apiCall("pull_status", { owner, repo, branch }) as Promise<{ latest_sha: string | null; branch: string }>,
+    [apiCall]
+  );
+
   return {
     connected,
     username,
@@ -264,5 +298,9 @@ export function useGitHub() {
     deleteBranch,
     listCommits,
     getStatus,
+    compareCommits,
+    getCommitDiff,
+    mergeBranch,
+    pullStatus,
   };
 }

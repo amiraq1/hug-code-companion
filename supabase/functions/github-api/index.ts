@@ -207,6 +207,103 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "compare_commits": {
+        // Compare two refs (branches, commits) for diff view
+        const base = params.base || "main";
+        const head = params.head || "HEAD";
+        const res = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/compare/${base}...${head}`
+        );
+        if (!res.ok) {
+          result = { error: `Compare failed (${res.status})` };
+          break;
+        }
+        const compareData = await res.json();
+        // Return a summary with files changed
+        result = {
+          ahead_by: compareData.ahead_by,
+          behind_by: compareData.behind_by,
+          total_commits: compareData.total_commits,
+          files: (compareData.files || []).map((f: any) => ({
+            filename: f.filename,
+            status: f.status,
+            additions: f.additions,
+            deletions: f.deletions,
+            changes: f.changes,
+            patch: f.patch?.substring(0, 2000) || "", // Limit patch size
+          })),
+        };
+        break;
+      }
+
+      case "get_commit_diff": {
+        // Get diff for a specific commit
+        const res = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/commits/${params.sha}`
+        );
+        if (!res.ok) {
+          result = { error: `Failed to get commit (${res.status})` };
+          break;
+        }
+        const commitData = await res.json();
+        result = {
+          sha: commitData.sha,
+          message: commitData.commit?.message,
+          author: commitData.commit?.author,
+          files: (commitData.files || []).map((f: any) => ({
+            filename: f.filename,
+            status: f.status,
+            additions: f.additions,
+            deletions: f.deletions,
+            patch: f.patch?.substring(0, 3000) || "",
+          })),
+        };
+        break;
+      }
+
+      case "merge_branch": {
+        // Merge head branch into base branch
+        const res = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/merges`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              base: params.base,
+              head: params.head,
+              commit_message: params.message || `Merge ${params.head} into ${params.base}`,
+            }),
+          }
+        );
+        if (res.status === 409) {
+          result = { error: "merge_conflict", message: "Merge conflict detected. Please resolve conflicts manually." };
+          break;
+        }
+        if (res.status === 204) {
+          result = { message: "Nothing to merge — already up to date." };
+          break;
+        }
+        result = await res.json();
+        break;
+      }
+
+      case "pull_status": {
+        // Check if local branch is behind remote (compare default branch)
+        const branch = params.branch || "main";
+        const commitsRes = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/commits?sha=${branch}&per_page=1`
+        );
+        const latestCommits = await commitsRes.json();
+        result = {
+          latest_sha: Array.isArray(latestCommits) && latestCommits[0]?.sha || null,
+          branch,
+        };
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
           status: 400,
