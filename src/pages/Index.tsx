@@ -165,6 +165,14 @@ const Index = () => {
     file_tree: files.map((f) => f.name).join(", "),
   }), [activeFile, openFilePaths, files]);
 
+  const handleInsertCode = useCallback((code: string) => {
+    if (activeFile && activeFilePath) {
+      const currentContent = activeFile.content || "";
+      const newContent = currentContent + "\n" + code;
+      handleContentChange(activeFilePath, newContent);
+    }
+  }, [activeFile, activeFilePath, handleContentChange]);
+
   const handleGitHubFileOpen = useCallback(
     (path: string, content: string, language: string) => {
       const fileName = path.split("/").pop() || path;
@@ -339,7 +347,7 @@ const Index = () => {
             {mobileTab === "chat" && (
               <div className="flex-1">
                 <Suspense fallback={<LazyFallback />}>
-                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} projectContext={projectContext} />
+                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} />
                 </Suspense>
               </div>
             )}
@@ -530,7 +538,7 @@ const Index = () => {
           <div className="w-80 shrink-0 animate-slide-in-right h-full">
             <Suspense fallback={<LazyFallback />}>
               {rightPanel === "chat" ? (
-                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} projectContext={projectContext} />
+                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} />
               ) : rightPanel === "github" ? (
                 <GitHubPanel onFileOpen={handleGitHubFileOpen} />
               ) : (

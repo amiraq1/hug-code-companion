@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Sparkles, Loader2, Square } from "lucide-react";
+import { Send, Bot, User, Sparkles, Loader2, Square, ClipboardPaste, Check } from "lucide-react";
 import type { ChatMessage } from "@/stores/editorStore";
 import type { FileNode } from "@/stores/editorStore";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
 const CODE_ASSIST_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/code-assist`;
 
@@ -16,10 +17,38 @@ interface AIChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (content: string) => void;
   onStreamMessage?: (id: string, content: string, done: boolean) => void;
+  onInsertCode?: (code: string) => void;
   projectContext?: ProjectContext;
 }
 
-export function AIChatPanel({ messages, onSendMessage, onStreamMessage, projectContext }: AIChatPanelProps) {
+function CodeBlockWithInsert({ code, className, onInsert }: { code: string; className?: string; onInsert?: (code: string) => void }) {
+  const [inserted, setInserted] = useState(false);
+  const handleInsert = () => {
+    if (onInsert) {
+      onInsert(code);
+      setInserted(true);
+      toast.success("تم إدراج الكود في المحرر");
+      setTimeout(() => setInserted(false), 2000);
+    }
+  };
+  return (
+    <div className="relative group">
+      <code className={className}>{code}</code>
+      {onInsert && (
+        <button
+          onClick={handleInsert}
+          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 text-primary text-[10px] font-mono border border-primary/20"
+          title="إدراج في المحرر"
+        >
+          {inserted ? <Check className="h-3 w-3" /> : <ClipboardPaste className="h-3 w-3" />}
+          {inserted ? "تم" : "إدراج"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsertCode, projectContext }: AIChatPanelProps) {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -186,7 +215,29 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, projectC
             >
               {msg.role === "assistant" ? (
                 <div className="prose prose-sm prose-invert max-w-none [&_p]:m-0 [&_pre]:bg-background/80 [&_pre]:p-2.5 [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_code]:text-primary/80 [&_code]:text-[11px] [&_code]:font-mono">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      pre({ children }) {
+                        return <pre className="relative group">{children}</pre>;
+                      },
+                      code({ className, children, ...props }) {
+                        const isBlock = className?.startsWith("language-");
+                        const codeStr = String(children).replace(/\n$/, "");
+                        if (!isBlock) {
+                          return <code className={className} {...props}>{children}</code>;
+                        }
+                        return (
+                          <CodeBlockWithInsert
+                            code={codeStr}
+                            className={className}
+                            onInsert={onInsertCode}
+                          />
+                        );
+                      },
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
               ) : (
                 msg.content
