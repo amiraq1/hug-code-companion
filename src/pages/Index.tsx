@@ -15,6 +15,7 @@ const Index = () => {
   const [openFilePaths, setOpenFilePaths] = useState<string[]>(["src/App.tsx"]);
   const [chatVisible, setChatVisible] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [rightPanel, setRightPanel] = useState<"chat" | "github">("chat");
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
