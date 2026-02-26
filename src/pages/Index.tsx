@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSwipe } from "@/hooks/useSwipe";
+import { useSwipe, type SwipeDirection } from "@/hooks/useSwipe";
 import { LoginScreen } from "@/components/screens/LoginScreen";
 import { ReposScreen } from "@/components/screens/ReposScreen";
 import {
@@ -59,16 +59,36 @@ const Index = () => {
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(DEFAULT_EDITOR_SETTINGS);
   const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
+  const [slideDirection, setSlideDirection] = useState<SwipeDirection>(null);
   const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
-  const swipeHandlers = useSwipe({
-    onSwipeLeft: () => setMobileTab(prev => {
+
+  const navigateTab = useCallback((direction: "left" | "right") => {
+    setMobileTab(prev => {
       const i = MOBILE_TABS.indexOf(prev);
-      return i < MOBILE_TABS.length - 1 ? MOBILE_TABS[i + 1] : prev;
-    }),
-    onSwipeRight: () => setMobileTab(prev => {
-      const i = MOBILE_TABS.indexOf(prev);
-      return i > 0 ? MOBILE_TABS[i - 1] : prev;
-    }),
+      if (direction === "left" && i < MOBILE_TABS.length - 1) {
+        setSlideDirection("left");
+        return MOBILE_TABS[i + 1];
+      }
+      if (direction === "right" && i > 0) {
+        setSlideDirection("right");
+        return MOBILE_TABS[i - 1];
+      }
+      return prev;
+    });
+  }, []);
+
+  const switchToTab = useCallback((tab: MobileTab) => {
+    setMobileTab(prev => {
+      const fromIdx = MOBILE_TABS.indexOf(prev);
+      const toIdx = MOBILE_TABS.indexOf(tab);
+      setSlideDirection(toIdx > fromIdx ? "left" : toIdx < fromIdx ? "right" : null);
+      return tab;
+    });
+  }, []);
+
+  const { onTouchStart, onTouchEnd } = useSwipe({
+    onSwipeLeft: () => navigateTab("left"),
+    onSwipeRight: () => navigateTab("right"),
     threshold: 60,
   });
   const { commitFile, online } = useGitHub();
@@ -246,59 +266,68 @@ const Index = () => {
         </div>
 
         {/* Mobile Content */}
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0" {...swipeHandlers}>
-          {mobileTab === "files" && (
-            <div className="flex-1 overflow-y-auto">
-              <FileExplorer
-                files={files}
-                activeFile={activeFilePath}
-                onFileSelect={handleFileSelect}
-              />
-            </div>
-          )}
-
-          {mobileTab === "editor" && (
-            <div className="flex-1 flex flex-col min-h-0">
-              <TabBar
-                openFiles={openFiles}
-                activeFile={activeFilePath}
-                onTabSelect={setActiveFilePath}
-                onTabClose={handleTabClose}
-                onCommitFile={setCommitDialogPath}
-              />
-              <Suspense fallback={<LazyFallback />}>
-                <CodeEditor
-                  file={activeFile}
-                  onContentChange={handleContentChange}
-                  settings={editorSettings}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          <div
+            key={mobileTab}
+            className={`flex-1 flex flex-col min-h-0 ${
+              slideDirection === "left" ? "animate-slide-from-right" :
+              slideDirection === "right" ? "animate-slide-from-left" :
+              "animate-fade-in"
+            }`}
+          >
+            {mobileTab === "files" && (
+              <div className="flex-1 overflow-y-auto">
+                <FileExplorer
+                  files={files}
+                  activeFile={activeFilePath}
+                  onFileSelect={handleFileSelect}
                 />
-              </Suspense>
-            </div>
-          )}
+              </div>
+            )}
 
-          {mobileTab === "preview" && (
-            <div className="flex-1">
-              <Suspense fallback={<LazyFallback />}>
-                <PreviewPanel file={activeFile} />
-              </Suspense>
-            </div>
-          )}
+            {mobileTab === "editor" && (
+              <>
+                <TabBar
+                  openFiles={openFiles}
+                  activeFile={activeFilePath}
+                  onTabSelect={setActiveFilePath}
+                  onTabClose={handleTabClose}
+                  onCommitFile={setCommitDialogPath}
+                />
+                <Suspense fallback={<LazyFallback />}>
+                  <CodeEditor
+                    file={activeFile}
+                    onContentChange={handleContentChange}
+                    settings={editorSettings}
+                  />
+                </Suspense>
+              </>
+            )}
 
-          {mobileTab === "chat" && (
-            <div className="flex-1">
-              <Suspense fallback={<LazyFallback />}>
-                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
-              </Suspense>
-            </div>
-          )}
+            {mobileTab === "preview" && (
+              <div className="flex-1">
+                <Suspense fallback={<LazyFallback />}>
+                  <PreviewPanel file={activeFile} />
+                </Suspense>
+              </div>
+            )}
 
-          {mobileTab === "git" && (
-            <div className="flex-1 overflow-y-auto">
-              <Suspense fallback={<LazyFallback />}>
-                <GitPanel />
-              </Suspense>
-            </div>
-          )}
+            {mobileTab === "chat" && (
+              <div className="flex-1">
+                <Suspense fallback={<LazyFallback />}>
+                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+                </Suspense>
+              </div>
+            )}
+
+            {mobileTab === "git" && (
+              <div className="flex-1 overflow-y-auto">
+                <Suspense fallback={<LazyFallback />}>
+                  <GitPanel />
+                </Suspense>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile Bottom Nav */}
@@ -312,7 +341,7 @@ const Index = () => {
           ]).map(({ id, icon: Icon, label }) => (
             <button
               key={id}
-              onClick={() => setMobileTab(id)}
+              onClick={() => switchToTab(id)}
               className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[3rem] ${
                 mobileTab === id
                   ? "text-primary"
