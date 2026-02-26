@@ -7,8 +7,9 @@ import { StatusBar } from "@/components/ide/StatusBar";
 import { CommitDialog } from "@/components/ide/CommitDialog";
 import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
-import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github, Eye } from "lucide-react";
+import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github, Eye, GitBranch } from "lucide-react";
 import { PreviewPanel } from "@/components/ide/PreviewPanel";
+import { GitPanel } from "@/components/ide/GitPanel";
 import { GitHubPanel } from "@/components/ide/GitHubPanel";
 import { useGitHub } from "@/hooks/useGitHub";
 
@@ -18,7 +19,7 @@ const Index = () => {
   const [openFilePaths, setOpenFilePaths] = useState<string[]>(["src/App.tsx"]);
   const [chatVisible, setChatVisible] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [rightPanel, setRightPanel] = useState<"chat" | "github">("chat");
+  const [rightPanel, setRightPanel] = useState<"chat" | "github" | "git">("chat");
   const [previewVisible, setPreviewVisible] = useState(false);
   const [commitDialogPath, setCommitDialogPath] = useState<string | null>(null);
   const { commitFile } = useGitHub();
@@ -187,6 +188,17 @@ const Index = () => {
           >
             <Github className="h-3.5 w-3.5" />
           </button>
+          <button
+            onClick={() => { setRightPanel("git"); setChatVisible(true); }}
+            className={`p-1.5 rounded-md transition-all duration-200 ${
+              rightPanel === "git" && chatVisible
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            }`}
+            title="Git"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
@@ -220,11 +232,13 @@ const Index = () => {
 
         {/* Right Panel */}
         {chatVisible && (
-          <div className="w-80 shrink-0 animate-slide-in-right">
+          <div className="w-80 shrink-0 animate-slide-in-right h-full">
             {rightPanel === "chat" ? (
               <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
-            ) : (
+            ) : rightPanel === "github" ? (
               <GitHubPanel onFileOpen={handleGitHubFileOpen} />
+            ) : (
+              <GitPanel />
             )}
           </div>
         )}

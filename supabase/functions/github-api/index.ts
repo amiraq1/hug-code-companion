@@ -93,8 +93,74 @@ Deno.serve(async (req) => {
       }
 
       case "list_branches": {
-        const res = await githubFetch(token, `/repos/${params.owner}/${params.repo}/branches`);
+        const res = await githubFetch(token, `/repos/${params.owner}/${params.repo}/branches?per_page=100`);
         result = await res.json();
+        break;
+      }
+
+      case "create_branch": {
+        // Get SHA of source branch
+        const refRes = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/git/ref/heads/${params.from || "main"}`
+        );
+        if (!refRes.ok) {
+          result = { error: "Source branch not found" };
+          break;
+        }
+        const refData = await refRes.json();
+        const sha = refData.object.sha;
+        const res = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/git/refs`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              ref: `refs/heads/${params.branch}`,
+              sha,
+            }),
+          }
+        );
+        result = await res.json();
+        break;
+      }
+
+      case "delete_branch": {
+        const res = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/git/refs/heads/${params.branch}`,
+          { method: "DELETE" }
+        );
+        result = res.ok ? { success: true } : await res.json();
+        break;
+      }
+
+      case "list_commits": {
+        const sha = params.branch ? `?sha=${params.branch}&per_page=30` : "?per_page=30";
+        const res = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/commits${sha}`
+        );
+        result = await res.json();
+        break;
+      }
+
+      case "get_status": {
+        // Get the latest commit diff to simulate "status"
+        const commitRes = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/commits?per_page=1`
+        );
+        const commits = await commitRes.json();
+        if (Array.isArray(commits) && commits.length > 0) {
+          const detailRes = await githubFetch(
+            token,
+            `/repos/${params.owner}/${params.repo}/commits/${commits[0].sha}`
+          );
+          result = await detailRes.json();
+        } else {
+          result = { files: [] };
+        }
         break;
       }
 
