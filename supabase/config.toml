@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.github-api]
 verify_jwt = false
+
+[functions.generate-plan]
+verify_jwt = false

@@ -17,6 +17,7 @@ import {
   Loader2,
   Code2,
   FolderTree,
+  Sparkles,
 } from "lucide-react";
 import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -28,6 +29,7 @@ import {
   DEFAULT_EDITOR_SETTINGS,
   type EditorSettings,
 } from "@/components/screens/SettingsScreen";
+import { AIProjectPlanner } from "@/components/screens/AIProjectPlanner";
 
 // Lazy load heavy components
 const CodeEditor = lazy(() => import("@/components/ide/CodeEditor").then(m => ({ default: m.CodeEditor })));
@@ -42,7 +44,7 @@ const LazyFallback = () => (
   </div>
 );
 
-type AppScreen = "login" | "repos" | "editor" | "settings";
+type AppScreen = "login" | "repos" | "editor" | "settings" | "ai-planner";
 type MobileTab = "files" | "editor" | "preview" | "chat" | "git";
 
 const Index = () => {
@@ -238,6 +240,15 @@ const Index = () => {
     );
   }
 
+  if (screen === "ai-planner") {
+    return (
+      <AIProjectPlanner
+        onBack={() => setScreen("editor")}
+        sessionId={localStorage.getItem("hugcode_session") || "default"}
+      />
+    );
+  }
+
   // Mobile layout
   if (isMobile) {
     return (
@@ -251,6 +262,12 @@ const Index = () => {
             </span>
           </div>
           <div className="flex-1" />
+          <button
+            onClick={() => setScreen("ai-planner")}
+            className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
           <button
             onClick={() => setScreen("repos")}
             className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
@@ -378,6 +395,13 @@ const Index = () => {
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => setScreen("ai-planner")}
+            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+            title="AI Project Planner"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+          </button>
           <button
             onClick={() => setScreen("repos")}
             className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
