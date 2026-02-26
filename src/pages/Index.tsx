@@ -178,6 +178,7 @@ const Index = () => {
             activeFile={activeFilePath}
             onTabSelect={setActiveFilePath}
             onTabClose={handleTabClose}
+            onCommitFile={setCommitDialogPath}
           />
           <CodeEditor file={activeFile} onContentChange={handleContentChange} />
         </div>
