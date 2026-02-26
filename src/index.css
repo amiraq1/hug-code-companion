@@ -156,3 +156,8 @@
 .monaco-editor .margin {
   background: transparent !important;
 }
+
+/* Safe area for mobile bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
