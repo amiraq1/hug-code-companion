@@ -1,4 +1,4 @@
-import { X, File } from "lucide-react";
+import { X, File, Upload } from "lucide-react";
 import type { FileNode } from "@/stores/editorStore";
 
 interface TabBarProps {
@@ -6,9 +6,10 @@ interface TabBarProps {
   activeFile: string | null;
   onTabSelect: (path: string) => void;
   onTabClose: (path: string) => void;
+  onCommitFile?: (path: string) => void;
 }
 
-export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose }: TabBarProps) {
+export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommitFile }: TabBarProps) {
   if (openFiles.length === 0) return null;
 
   const getTabColor = (name: string) => {
@@ -22,6 +23,7 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose }: TabBa
     <div className="flex bg-ide-tab-inactive border-b border-border overflow-x-auto">
       {openFiles.map((file) => {
         const isActive = activeFile === file.path;
+        const isGitHub = file.path.startsWith("github:");
         return (
           <div
             key={file.path}
@@ -34,6 +36,18 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose }: TabBa
           >
             <File className={`h-3.5 w-3.5 shrink-0 ${getTabColor(file.name)}`} />
             <span className="truncate max-w-[120px]">{file.name}</span>
+            {isGitHub && onCommitFile && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCommitFile(file.path);
+                }}
+                className="opacity-0 group-hover:opacity-100 hover:bg-ide-success/20 text-ide-success rounded p-0.5 transition-opacity"
+                title="Commit & Push to GitHub"
+              >
+                <Upload className="h-3 w-3" />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
