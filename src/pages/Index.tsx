@@ -166,7 +166,7 @@ const Index = () => {
             {rightPanel === "chat" ? (
               <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
             ) : (
-              <GitHubPanel />
+              <GitHubPanel onFileOpen={handleGitHubFileOpen} />
             )}
           </div>
         )}
