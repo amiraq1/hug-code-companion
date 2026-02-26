@@ -165,6 +165,14 @@ const Index = () => {
     file_tree: files.map((f) => f.name).join(", "),
   }), [activeFile, openFilePaths, files]);
 
+  const handleInsertCode = useCallback((code: string) => {
+    if (activeFile && activeFilePath) {
+      const currentContent = activeFile.content || "";
+      const newContent = currentContent + "\n" + code;
+      handleContentChange(activeFilePath, newContent);
+    }
+  }, [activeFile, activeFilePath, handleContentChange]);
+
   const handleGitHubFileOpen = useCallback(
     (path: string, content: string, language: string) => {
       const fileName = path.split("/").pop() || path;
