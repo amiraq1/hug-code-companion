@@ -97,7 +97,7 @@ const Index = () => {
       id: "1",
       role: "assistant",
       content:
-        "👋 Welcome to **Code Agent Studio**! I'm your AI coding assistant. I can help you:\n\n- ✏️ Write & refactor code\n- 🐛 Debug issues\n- 📖 Explain concepts\n- 🏗️ Architect solutions\n\nWhat would you like to work on?",
+        "👋 مرحباً بك في **HugCode**! أنا مساعدك الذكي للبرمجة. يمكنني مساعدتك في:\n\n- ✏️ كتابة وتحسين الكود\n- 🐛 تصحيح الأخطاء\n- 📖 شرح المفاهيم\n- 🏗️ تصميم الحلول\n\nماذا تريد أن نعمل عليه؟",
       timestamp: new Date(),
     },
   ]);
