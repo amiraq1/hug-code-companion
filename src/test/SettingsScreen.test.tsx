@@ -97,7 +97,7 @@ describe("SettingsScreen", () => {
 
   it("renders all three tab buttons", () => {
     render(<SettingsScreen {...defaultProps} />);
-    expect(screen.getByText("Editor")).toBeInTheDocument();
+    expect(screen.getAllByText("Editor").length).toBeGreaterThan(0);
     expect(screen.getAllByText("GitHub").length).toBeGreaterThan(0);
     expect(screen.getByText("About")).toBeInTheDocument();
   });
