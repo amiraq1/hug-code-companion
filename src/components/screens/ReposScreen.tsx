@@ -118,9 +118,9 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
+          <img src="/app-icon.png" alt="" className="w-5 h-5 rounded" />
           <span className="text-[13px] font-display font-semibold tracking-tight text-foreground">
-            code<span className="text-primary">agent</span>
+            Hug<span className="text-primary">Code</span>
           </span>
         </div>
         <span className="text-xs text-muted-foreground font-mono">/ repositories</span>

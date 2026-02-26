@@ -70,16 +70,16 @@ export function SettingsScreen({ onBack, editorSettings, onSettingsChange }: Set
         <span className="text-sm font-display font-semibold text-foreground">Settings</span>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar Tabs */}
-        <div className="w-48 shrink-0 bg-ide-sidebar border-r border-border py-2">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Sidebar Tabs — horizontal on mobile, vertical on desktop */}
+        <div className="md:w-48 shrink-0 bg-ide-sidebar md:border-r border-b md:border-b-0 border-border py-1 md:py-2 flex md:flex-col overflow-x-auto">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-all duration-150 ${
+              className={`flex items-center gap-2 md:gap-3 px-4 py-2 md:py-2.5 text-sm transition-all duration-150 whitespace-nowrap ${
                 tab === t.id
-                  ? "text-primary bg-primary/5 border-r-2 border-r-primary"
+                  ? "text-primary bg-primary/5 md:border-r-2 md:border-r-primary border-b-2 md:border-b-0 border-b-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
               }`}
             >
@@ -235,9 +235,9 @@ export function SettingsScreen({ onBack, editorSettings, onSettingsChange }: Set
 
                 <div className="bg-card border border-border rounded-xl p-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                    <img src="/app-icon.png" alt="HugCode" className="w-8 h-8 rounded-lg" />
                     <span className="text-xl font-display font-bold text-foreground">
-                      code<span className="text-primary">agent</span>
+                      Hug<span className="text-primary">Code</span>
                     </span>
                   </div>
 
