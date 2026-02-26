@@ -59,16 +59,36 @@ const Index = () => {
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(DEFAULT_EDITOR_SETTINGS);
   const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
+  const [slideDirection, setSlideDirection] = useState<SwipeDirection>(null);
   const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
-  const swipeHandlers = useSwipe({
-    onSwipeLeft: () => setMobileTab(prev => {
+
+  const navigateTab = useCallback((direction: "left" | "right") => {
+    setMobileTab(prev => {
       const i = MOBILE_TABS.indexOf(prev);
-      return i < MOBILE_TABS.length - 1 ? MOBILE_TABS[i + 1] : prev;
-    }),
-    onSwipeRight: () => setMobileTab(prev => {
-      const i = MOBILE_TABS.indexOf(prev);
-      return i > 0 ? MOBILE_TABS[i - 1] : prev;
-    }),
+      if (direction === "left" && i < MOBILE_TABS.length - 1) {
+        setSlideDirection("left");
+        return MOBILE_TABS[i + 1];
+      }
+      if (direction === "right" && i > 0) {
+        setSlideDirection("right");
+        return MOBILE_TABS[i - 1];
+      }
+      return prev;
+    });
+  }, []);
+
+  const switchToTab = useCallback((tab: MobileTab) => {
+    setMobileTab(prev => {
+      const fromIdx = MOBILE_TABS.indexOf(prev);
+      const toIdx = MOBILE_TABS.indexOf(tab);
+      setSlideDirection(toIdx > fromIdx ? "left" : toIdx < fromIdx ? "right" : null);
+      return tab;
+    });
+  }, []);
+
+  const { onTouchStart, onTouchEnd } = useSwipe({
+    onSwipeLeft: () => navigateTab("left"),
+    onSwipeRight: () => navigateTab("right"),
     threshold: 60,
   });
   const { commitFile, online } = useGitHub();
