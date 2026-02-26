@@ -14,8 +14,9 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommi
 
   const getTabColor = (name: string) => {
     if (name.endsWith(".tsx") || name.endsWith(".ts")) return "text-ide-info";
-    if (name.endsWith(".json")) return "text-ide-warning";
-    if (name.endsWith(".md")) return "text-foreground";
+    if (name.endsWith(".json")) return "text-primary/70";
+    if (name.endsWith(".md")) return "text-foreground/60";
+    if (name.endsWith(".css")) return "text-accent/70";
     return "text-muted-foreground";
   };
 
@@ -27,14 +28,14 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommi
         return (
           <div
             key={file.path}
-            className={`group flex items-center gap-1.5 px-3 py-1.5 text-sm cursor-pointer border-r border-border shrink-0 transition-colors ${
+            className={`tab-indicator group flex items-center gap-2 px-4 py-2 text-[12px] font-mono cursor-pointer border-r border-border/50 shrink-0 transition-all duration-200 ${
               isActive
-                ? "bg-ide-tab-active text-foreground border-t-2 border-t-primary"
-                : "text-muted-foreground hover:bg-secondary/30 border-t-2 border-t-transparent"
+                ? "active bg-ide-tab-active text-foreground"
+                : "text-muted-foreground hover:bg-secondary/30 hover:text-secondary-foreground"
             }`}
             onClick={() => onTabSelect(file.path)}
           >
-            <File className={`h-3.5 w-3.5 shrink-0 ${getTabColor(file.name)}`} />
+            <File className={`h-3 w-3 shrink-0 ${getTabColor(file.name)}`} />
             <span className="truncate max-w-[120px]">{file.name}</span>
             {isGitHub && onCommitFile && (
               <button
@@ -42,10 +43,10 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommi
                   e.stopPropagation();
                   onCommitFile(file.path);
                 }}
-                className="opacity-0 group-hover:opacity-100 hover:bg-ide-success/20 text-ide-success rounded p-0.5 transition-opacity"
-                title="Commit & Push to GitHub"
+                className="opacity-0 group-hover:opacity-100 hover:bg-ide-success/20 text-ide-success rounded p-0.5 transition-all duration-150"
+                title="Commit & Push"
               >
-                <Upload className="h-3 w-3" />
+                <Upload className="h-2.5 w-2.5" />
               </button>
             )}
             <button
@@ -53,9 +54,9 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommi
                 e.stopPropagation();
                 onTabClose(file.path);
               }}
-              className="opacity-0 group-hover:opacity-100 hover:bg-secondary rounded p-0.5 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 hover:bg-secondary rounded p-0.5 transition-all duration-150"
             >
-              <X className="h-3 w-3" />
+              <X className="h-2.5 w-2.5" />
             </button>
           </div>
         );

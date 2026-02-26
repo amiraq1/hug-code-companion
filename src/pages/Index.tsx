@@ -136,37 +136,52 @@ const Index = () => {
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
-      {/* Title Bar */}
-      <div className="h-9 bg-ide-sidebar border-b border-border flex items-center px-3 gap-2 shrink-0">
-        <Code2 className="h-4 w-4 text-primary" />
-        <span className="text-xs font-semibold text-foreground">Code Agent Studio</span>
+    <div className="h-screen flex flex-col overflow-hidden bg-background grain-overlay">
+      {/* Title Bar — asymmetric, typographic */}
+      <div className="h-10 bg-ide-sidebar border-b border-border flex items-center px-4 gap-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
+          <span className="text-[13px] font-display font-semibold tracking-tight text-foreground">
+            code<span className="text-primary">agent</span>
+          </span>
+        </div>
         <div className="flex-1" />
-        <button
-          onClick={() => setSidebarVisible(!sidebarVisible)}
-          className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
-        >
-          {sidebarVisible ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeft className="h-3.5 w-3.5" />}
-        </button>
-        <button
-          onClick={() => { setRightPanel("chat"); setChatVisible(true); }}
-          className={`p-1 rounded hover:bg-secondary transition-colors ${rightPanel === "chat" && chatVisible ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          <MessageSquare className="h-3.5 w-3.5" />
-        </button>
-        <button
-          onClick={() => { setRightPanel("github"); setChatVisible(true); }}
-          className={`p-1 rounded hover:bg-secondary transition-colors ${rightPanel === "github" && chatVisible ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          <Github className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={() => setSidebarVisible(!sidebarVisible)}
+            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+          >
+            {sidebarVisible ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeft className="h-3.5 w-3.5" />}
+          </button>
+          <div className="w-px h-4 bg-border mx-1" />
+          <button
+            onClick={() => { setRightPanel("chat"); setChatVisible(true); }}
+            className={`p-1.5 rounded-md transition-all duration-200 ${
+              rightPanel === "chat" && chatVisible
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            }`}
+          >
+            <MessageSquare className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => { setRightPanel("github"); setChatVisible(true); }}
+            className={`p-1.5 rounded-md transition-all duration-200 ${
+              rightPanel === "github" && chatVisible
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            }`}
+          >
+            <Github className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
         {sidebarVisible && (
-          <div className="w-56 shrink-0">
+          <div className="w-56 shrink-0 animate-fade-in">
             <FileExplorer files={files} activeFile={activeFilePath} onFileSelect={handleFileSelect} />
           </div>
         )}
@@ -183,9 +198,9 @@ const Index = () => {
           <CodeEditor file={activeFile} onContentChange={handleContentChange} />
         </div>
 
-        {/* Chat Panel */}
+        {/* Right Panel */}
         {chatVisible && (
-          <div className="w-80 shrink-0">
+          <div className="w-80 shrink-0 animate-slide-in-right">
             {rightPanel === "chat" ? (
               <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
             ) : (
