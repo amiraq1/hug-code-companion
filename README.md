@@ -1,73 +1,148 @@
-# Welcome to your Lovable project
+# Code Agent Studio
 
-## Project info
+> محرر كود ذكي مدعوم بالذكاء الاصطناعي مع تكامل GitHub كامل
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![React](https://img.shields.io/badge/React-18.3-61dafb)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178c6)
 
-## How can I edit this code?
+## 📋 الوصف
 
-There are several ways of editing your application.
+**Code Agent Studio** هو بيئة تطوير متكاملة (IDE) تعمل في المتصفح، مبنية باستخدام React وTypeScript. يوفر محرر كود احترافي مع مساعد ذكاء اصطناعي، وتكامل كامل مع GitHub لإدارة المستودعات والفروع والتغييرات.
 
-**Use Lovable**
+## ✨ الميزات الرئيسية
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- 🗂️ **مستعرض الملفات** — شجرة ملفات تفاعلية مع دعم المجلدات المتداخلة
+- ✏️ **محرر Monaco** — محرر كود احترافي مع تمييز بناء الجملة لأكثر من 10 لغات
+- 🤖 **مساعد AI** — دردشة ذكية مدمجة للمساعدة في كتابة الكود
+- 🔗 **تكامل GitHub** — تصفح المستودعات، تحرير الملفات، وعمل Commit & Push
+- 🌿 **إدارة Git** — عرض الفروع، سجل الالتزامات، وحالة المستودع
+- 👁️ **معاينة مباشرة** — عرض HTML/CSS/JS/Markdown/JSON مباشرة
+- ⚙️ **إعدادات قابلة للتخصيص** — حجم الخط، التفاف الأسطر، الخريطة المصغرة، والمزيد
+- 🎨 **سمة سينمائية داكنة** — تصميم احترافي مع تأثير grain overlay
 
-Changes made via Lovable will be committed automatically to this repo.
+## 🛠️ المتطلبات
 
-**Use your preferred IDE**
+- **Node.js** >= 18.0.0
+- **npm** أو **bun** لإدارة الحزم
+- حساب GitHub (اختياري — للتكامل مع المستودعات)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🚀 التثبيت والتشغيل
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
+# 1. استنساخ المشروع
 git clone <YOUR_GIT_URL>
+cd code-agent-studio
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 2. تثبيت التبعيات
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 3. تشغيل خادم التطوير
 npm run dev
+
+# 4. فتح المتصفح على
+# http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+## 📦 البناء للإنتاج
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# بناء نسخة الإنتاج
+npm run build
 
-**Use GitHub Codespaces**
+# معاينة نسخة الإنتاج محلياً
+npm run preview
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🏗️ البنية المعمارية
 
-## What technologies are used for this project?
+```
+src/
+├── components/
+│   ├── ide/               # مكونات بيئة التطوير
+│   │   ├── AIChatPanel    # لوحة الدردشة مع AI
+│   │   ├── CodeEditor     # محرر Monaco
+│   │   ├── CommitDialog   # حوار الالتزام
+│   │   ├── FileExplorer   # مستعرض الملفات
+│   │   ├── GitHubPanel    # لوحة GitHub
+│   │   ├── GitPanel       # لوحة Git
+│   │   ├── PreviewPanel   # لوحة المعاينة
+│   │   ├── StatusBar      # شريط الحالة
+│   │   └── TabBar         # شريط التبويبات
+│   ├── screens/           # الشاشات الرئيسية
+│   │   ├── LoginScreen    # شاشة تسجيل الدخول
+│   │   ├── ReposScreen    # شاشة المستودعات
+│   │   └── SettingsScreen # شاشة الإعدادات
+│   └── ui/                # مكونات shadcn/ui
+├── hooks/                 # React Hooks مخصصة
+│   ├── useGitHub          # إدارة اتصال GitHub والعمليات
+│   └── usePreview         # منطق المعاينة المباشرة
+├── stores/                # إدارة الحالة
+│   └── editorStore        # حالة المحرر والملفات
+├── pages/                 # صفحات التطبيق
+│   └── Index              # الصفحة الرئيسية (جهاز التوجيه)
+└── test/                  # اختبارات Vitest
+```
 
-This project is built with:
+## 📖 دليل المستخدم
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### تسجيل الدخول
+1. افتح التطبيق — ستظهر شاشة الترحيب
+2. اضغط **"Sign in with GitHub"** للاتصال بحسابك
+3. أو اضغط **"Continue without GitHub"** للدخول كضيف
 
-## How can I deploy this project?
+### تصفح المستودعات
+1. اضغط أيقونة 📁 في شريط العنوان
+2. ابحث عن مستودع بالاسم
+3. فلتر حسب: الكل / عام / خاص
+4. اضغط على المستودع لفتحه في المحرر
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+### تحرير الكود
+- اختر ملفاً من مستعرض الملفات (يسار)
+- حرّر الكود في محرر Monaco (وسط)
+- استخدم تبويبات متعددة للتنقل بين الملفات
+- اضغط Ctrl+S لحفظ التغييرات
 
-## Can I connect a custom domain to my Lovable project?
+### استخدام Git
+1. اضغط أيقونة 🌿 لفتح لوحة Git
+2. **Status** — عرض الملفات المعدّلة
+3. **Branches** — إدارة الفروع (إنشاء/حذف/تبديل)
+4. **Log** — عرض سجل الالتزامات
 
-Yes, you can!
+### الإعدادات
+- اضغط أيقونة ⚙️ لفتح الإعدادات
+- **المحرر**: حجم الخط، Tab Size، التفاف الأسطر، الخريطة المصغرة
+- **GitHub**: إدارة الاتصال
+- **حول**: معلومات التطبيق
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 🧪 الاختبارات
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```bash
+# تشغيل جميع الاختبارات
+npm test
+
+# تشغيل مع التغطية
+npm test -- --coverage
+
+# تشغيل اختبار محدد
+npm test -- src/test/LoginScreen.test.tsx
+```
+
+## 🔧 التقنيات المستخدمة
+
+| التقنية | الاستخدام |
+|---------|----------|
+| React 18 | إطار العمل الأساسي |
+| TypeScript 5 | السلامة النوعية |
+| Vite | أداة البناء |
+| Tailwind CSS | التنسيق |
+| Monaco Editor | محرر الكود |
+| shadcn/ui | مكونات UI |
+| Vitest | إطار الاختبار |
+| Lucide React | الأيقونات |
+| React Router | التوجيه |
+
+## 📄 الترخيص
+
+MIT License — انظر ملف [LICENSE](LICENSE) للتفاصيل.
