@@ -43,7 +43,7 @@ const LazyFallback = () => (
   </div>
 );
 
-type AppScreen = "login" | "repos" | "editor" | "settings";
+type AppScreen = "login" | "repos" | "editor" | "settings" | "ai-planner";
 type MobileTab = "files" | "editor" | "preview" | "chat" | "git";
 
 const Index = () => {
