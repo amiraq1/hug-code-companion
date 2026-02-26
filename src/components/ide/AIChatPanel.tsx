@@ -188,7 +188,29 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
             >
               {msg.role === "assistant" ? (
                 <div className="prose prose-sm prose-invert max-w-none [&_p]:m-0 [&_pre]:bg-background/80 [&_pre]:p-2.5 [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_code]:text-primary/80 [&_code]:text-[11px] [&_code]:font-mono">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    components={{
+                      pre({ children }) {
+                        return <pre className="relative group">{children}</pre>;
+                      },
+                      code({ className, children, ...props }) {
+                        const isBlock = className?.startsWith("language-");
+                        const codeStr = String(children).replace(/\n$/, "");
+                        if (!isBlock) {
+                          return <code className={className} {...props}>{children}</code>;
+                        }
+                        return (
+                          <CodeBlockWithInsert
+                            code={codeStr}
+                            className={className}
+                            onInsert={onInsertCode}
+                          />
+                        );
+                      },
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
                 </div>
               ) : (
                 msg.content
