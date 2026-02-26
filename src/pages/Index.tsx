@@ -19,7 +19,7 @@ const Index = () => {
   const [openFilePaths, setOpenFilePaths] = useState<string[]>(["src/App.tsx"]);
   const [chatVisible, setChatVisible] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [rightPanel, setRightPanel] = useState<"chat" | "github">("chat");
+  const [rightPanel, setRightPanel] = useState<"chat" | "github" | "git">("chat");
   const [previewVisible, setPreviewVisible] = useState(false);
   const [commitDialogPath, setCommitDialogPath] = useState<string | null>(null);
   const { commitFile } = useGitHub();
