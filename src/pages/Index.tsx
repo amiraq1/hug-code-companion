@@ -538,7 +538,7 @@ const Index = () => {
           <div className="w-80 shrink-0 animate-slide-in-right h-full">
             <Suspense fallback={<LazyFallback />}>
               {rightPanel === "chat" ? (
-                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} projectContext={projectContext} />
+                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} />
               ) : rightPanel === "github" ? (
                 <GitHubPanel onFileOpen={handleGitHubFileOpen} />
               ) : (
