@@ -133,7 +133,11 @@ const Index = () => {
         {/* Chat Panel */}
         {chatVisible && (
           <div className="w-80 shrink-0">
-            <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+            {rightPanel === "chat" ? (
+              <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+            ) : (
+              <GitHubPanel />
+            )}
           </div>
         )}
       </div>
