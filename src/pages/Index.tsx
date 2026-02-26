@@ -15,8 +15,11 @@ import {
   Settings,
   FolderGit2,
   Loader2,
+  Code2,
+  FolderTree,
 } from "lucide-react";
 import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { LoginScreen } from "@/components/screens/LoginScreen";
 import { ReposScreen } from "@/components/screens/ReposScreen";
 import {
@@ -39,19 +42,22 @@ const LazyFallback = () => (
 );
 
 type AppScreen = "login" | "repos" | "editor" | "settings";
+type MobileTab = "files" | "editor" | "preview" | "chat" | "git";
 
 const Index = () => {
+  const isMobile = useIsMobile();
   const [screen, setScreen] = useState<AppScreen>("login");
   const [files, setFiles] = useState<FileNode[]>(DEFAULT_FILES);
   const [activeFilePath, setActiveFilePath] = useState<string | null>("src/App.tsx");
   const [openFilePaths, setOpenFilePaths] = useState<string[]>(["src/App.tsx"]);
-  const [chatVisible, setChatVisible] = useState(true);
-  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [chatVisible, setChatVisible] = useState(!isMobile);
+  const [sidebarVisible, setSidebarVisible] = useState(!isMobile);
   const [rightPanel, setRightPanel] = useState<"chat" | "github" | "git">("chat");
   const [previewVisible, setPreviewVisible] = useState(false);
   const [commitDialogPath, setCommitDialogPath] = useState<string | null>(null);
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(DEFAULT_EDITOR_SETTINGS);
   const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
+  const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
   const { commitFile, online } = useGitHub();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -72,7 +78,8 @@ const Index = () => {
   const handleFileSelect = useCallback((path: string) => {
     setActiveFilePath(path);
     setOpenFilePaths((prev) => (prev.includes(path) ? prev : [...prev, path]));
-  }, []);
+    if (isMobile) setMobileTab("editor");
+  }, [isMobile]);
 
   const handleTabClose = useCallback(
     (path: string) => {
@@ -143,8 +150,9 @@ const Index = () => {
       setOpenFilePaths((prevPaths) =>
         prevPaths.includes(path) ? prevPaths : [...prevPaths, path]
       );
+      if (isMobile) setMobileTab("editor");
     },
-    []
+    [isMobile]
   );
 
   const handleCommitGitHubFile = useCallback(
@@ -168,8 +176,8 @@ const Index = () => {
     setSelectedGitHubRepo(repo);
     setScreen("editor");
     setRightPanel("github");
-    setChatVisible(true);
-  }, []);
+    if (!isMobile) setChatVisible(true);
+  }, [isMobile]);
 
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
@@ -197,6 +205,125 @@ const Index = () => {
     );
   }
 
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="h-[100dvh] flex flex-col overflow-hidden bg-background grain-overlay">
+        {/* Mobile Header */}
+        <div className="h-11 bg-ide-sidebar border-b border-border flex items-center px-3 gap-2 shrink-0">
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
+            <span className="text-xs font-display font-semibold tracking-tight text-foreground">
+              code<span className="text-primary">agent</span>
+            </span>
+          </div>
+          <div className="flex-1" />
+          <button
+            onClick={() => setScreen("repos")}
+            className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+          >
+            <FolderGit2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setScreen("settings")}
+            className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Mobile Content */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+          {mobileTab === "files" && (
+            <div className="flex-1 overflow-y-auto">
+              <FileExplorer
+                files={files}
+                activeFile={activeFilePath}
+                onFileSelect={handleFileSelect}
+              />
+            </div>
+          )}
+
+          {mobileTab === "editor" && (
+            <div className="flex-1 flex flex-col min-h-0">
+              <TabBar
+                openFiles={openFiles}
+                activeFile={activeFilePath}
+                onTabSelect={setActiveFilePath}
+                onTabClose={handleTabClose}
+                onCommitFile={setCommitDialogPath}
+              />
+              <Suspense fallback={<LazyFallback />}>
+                <CodeEditor
+                  file={activeFile}
+                  onContentChange={handleContentChange}
+                  settings={editorSettings}
+                />
+              </Suspense>
+            </div>
+          )}
+
+          {mobileTab === "preview" && (
+            <div className="flex-1">
+              <Suspense fallback={<LazyFallback />}>
+                <PreviewPanel file={activeFile} />
+              </Suspense>
+            </div>
+          )}
+
+          {mobileTab === "chat" && (
+            <div className="flex-1">
+              <Suspense fallback={<LazyFallback />}>
+                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+              </Suspense>
+            </div>
+          )}
+
+          {mobileTab === "git" && (
+            <div className="flex-1 overflow-y-auto">
+              <Suspense fallback={<LazyFallback />}>
+                <GitPanel />
+              </Suspense>
+            </div>
+          )}
+        </div>
+
+        {/* Mobile Bottom Nav */}
+        <div className="h-14 bg-ide-statusbar border-t border-border flex items-center justify-around px-1 shrink-0 safe-area-bottom">
+          {([
+            { id: "files" as MobileTab, icon: FolderTree, label: "Files" },
+            { id: "editor" as MobileTab, icon: Code2, label: "Code" },
+            { id: "preview" as MobileTab, icon: Eye, label: "Preview" },
+            { id: "chat" as MobileTab, icon: MessageSquare, label: "AI" },
+            { id: "git" as MobileTab, icon: GitBranch, label: "Git" },
+          ]).map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setMobileTab(id)}
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[3rem] ${
+                mobileTab === id
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="text-[10px] font-medium">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {commitDialogPath && (
+          <CommitDialog
+            filePath={commitDialogPath}
+            onCommit={handleCommitGitHubFile}
+            onClose={() => setCommitDialogPath(null)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Desktop layout (unchanged)
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background grain-overlay">
       {/* Title Bar */}
