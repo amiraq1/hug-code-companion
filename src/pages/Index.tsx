@@ -147,16 +147,23 @@ const Index = () => {
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMsg]);
-    setTimeout(() => {
-      const aiMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: generateResponse(content),
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-    }, 800);
   }, []);
+
+  const handleStreamMessage = useCallback((id: string, content: string, done: boolean) => {
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.id === id) {
+        return prev.map((m) => (m.id === id ? { ...m, content } : m));
+      }
+      return [...prev, { id, role: "assistant" as const, content, timestamp: new Date() }];
+    });
+  }, []);
+
+  const projectContext = useMemo(() => ({
+    active_file: activeFile ? { path: activeFile.path, content: activeFile.content, language: activeFile.language } : null,
+    open_files: openFilePaths,
+    file_tree: files.map((f) => f.name).join(", "),
+  }), [activeFile, openFilePaths, files]);
 
   const handleGitHubFileOpen = useCallback(
     (path: string, content: string, language: string) => {
@@ -332,7 +339,7 @@ const Index = () => {
             {mobileTab === "chat" && (
               <div className="flex-1">
                 <Suspense fallback={<LazyFallback />}>
-                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} projectContext={projectContext} />
                 </Suspense>
               </div>
             )}
@@ -523,7 +530,7 @@ const Index = () => {
           <div className="w-80 shrink-0 animate-slide-in-right h-full">
             <Suspense fallback={<LazyFallback />}>
               {rightPanel === "chat" ? (
-                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} projectContext={projectContext} />
               ) : rightPanel === "github" ? (
                 <GitHubPanel onFileOpen={handleGitHubFileOpen} />
               ) : (
@@ -552,18 +559,5 @@ const Index = () => {
   );
 };
 
-function generateResponse(input: string): string {
-  const lower = input.toLowerCase();
-  if (lower.includes("hello") || lower.includes("hi")) {
-    return "Hey there! 👋 Ready to code. What are you building today?";
-  }
-  if (lower.includes("help")) {
-    return "I can help with:\n\n```\n• Writing new components\n• Debugging errors\n• Code reviews\n• Explaining concepts\n```\n\nJust describe what you need!";
-  }
-  if (lower.includes("react") || lower.includes("component")) {
-    return "Here's a quick React component pattern:\n\n```tsx\ninterface Props {\n  title: string;\n  onClick: () => void;\n}\n\nexport function MyComponent({ title, onClick }: Props) {\n  return (\n    <button onClick={onClick}>\n      {title}\n    </button>\n  );\n}\n```\n\nWant me to customize this for your use case?";
-  }
-  return "I understand! Let me think about that...\n\nI'd suggest breaking this into smaller steps. What specific part would you like to tackle first?";
-}
 
 export default Index;

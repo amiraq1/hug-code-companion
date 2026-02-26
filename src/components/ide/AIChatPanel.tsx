@@ -1,26 +1,151 @@
-import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Bot, User, Sparkles, Loader2, Square } from "lucide-react";
 import type { ChatMessage } from "@/stores/editorStore";
+import type { FileNode } from "@/stores/editorStore";
 import ReactMarkdown from "react-markdown";
+
+const CODE_ASSIST_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/code-assist`;
+
+interface ProjectContext {
+  active_file?: { path: string; content?: string; language?: string } | null;
+  open_files?: string[];
+  file_tree?: string;
+}
 
 interface AIChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (content: string) => void;
+  onStreamMessage?: (id: string, content: string, done: boolean) => void;
+  projectContext?: ProjectContext;
 }
 
-export function AIChatPanel({ messages, onSendMessage }: AIChatPanelProps) {
+export function AIChatPanel({ messages, onSendMessage, onStreamMessage, projectContext }: AIChatPanelProps) {
   const [input, setInput] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    onSendMessage(input.trim());
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setIsStreaming(false);
+  }, []);
+
+  const handleSend = useCallback(async () => {
+    const text = input.trim();
+    if (!text || isStreaming) return;
     setInput("");
-  };
+
+    // Add user message
+    onSendMessage(text);
+
+    if (!onStreamMessage) return;
+
+    // Start streaming
+    setIsStreaming(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const assistantId = (Date.now() + 1).toString();
+
+    try {
+      // Build messages for API (exclude the welcome message, only user/assistant pairs)
+      const apiMessages = messages
+        .filter((m) => m.id !== "1") // skip welcome
+        .map((m) => ({ role: m.role, content: m.content }));
+      apiMessages.push({ role: "user", content: text });
+
+      const resp = await fetch(CODE_ASSIST_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          messages: apiMessages,
+          project_context: projectContext || null,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "خطأ في الاتصال" }));
+        onStreamMessage(assistantId, `⚠️ ${err.error || "حدث خطأ"}`, true);
+        setIsStreaming(false);
+        return;
+      }
+
+      if (!resp.body) {
+        onStreamMessage(assistantId, "⚠️ لا يوجد استجابة", true);
+        setIsStreaming(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              accumulated += content;
+              onStreamMessage(assistantId, accumulated, false);
+            }
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (buffer.trim()) {
+        for (let raw of buffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) accumulated += content;
+          } catch {}
+        }
+      }
+
+      onStreamMessage(assistantId, accumulated || "...", true);
+    } catch (e: any) {
+      if (e.name !== "AbortError") {
+        onStreamMessage(assistantId, `⚠️ خطأ: ${e.message}`, true);
+      }
+    } finally {
+      setIsStreaming(false);
+      abortRef.current = null;
+    }
+  }, [input, isStreaming, messages, onSendMessage, onStreamMessage, projectContext]);
 
   return (
     <div className="h-full bg-ide-panel border-l border-border flex flex-col">
@@ -29,7 +154,7 @@ export function AIChatPanel({ messages, onSendMessage }: AIChatPanelProps) {
         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
         <span className="text-[13px] font-display font-medium text-foreground tracking-tight">Agent</span>
         <span className="ml-auto text-[9px] px-2 py-0.5 rounded-full bg-ide-success/10 text-ide-success font-mono uppercase tracking-wider">
-          live
+          {isStreaming ? "streaming" : "live"}
         </span>
       </div>
 
@@ -74,6 +199,16 @@ export function AIChatPanel({ messages, onSendMessage }: AIChatPanelProps) {
             )}
           </div>
         ))}
+        {isStreaming && messages[messages.length - 1]?.role === "user" && (
+          <div className="flex gap-2.5 animate-fade-in">
+            <div className="w-5 h-5 rounded bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+              <Bot className="h-3 w-3 text-primary/70" />
+            </div>
+            <div className="rounded-lg px-3 py-2.5 bg-secondary/60">
+              <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -86,15 +221,25 @@ export function AIChatPanel({ messages, onSendMessage }: AIChatPanelProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="Ask anything..."
-            className="flex-1 bg-secondary/50 border border-border rounded-lg px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/20 transition-all duration-200"
+            disabled={isStreaming}
+            className="flex-1 bg-secondary/50 border border-border rounded-lg px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/20 transition-all duration-200 disabled:opacity-50"
           />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-20 transition-all duration-200"
-          >
-            <Send className="h-3.5 w-3.5" />
-          </button>
+          {isStreaming ? (
+            <button
+              onClick={handleStop}
+              className="px-3 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-all duration-200"
+            >
+              <Square className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-20 transition-all duration-200"
+            >
+              <Send className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </div>
