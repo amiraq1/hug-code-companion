@@ -15,12 +15,12 @@ describe("CommitDialog", () => {
 
   it("renders the file path", () => {
     render(<CommitDialog {...defaultProps} />);
-    expect(screen.getByText(/test\.ts/)).toBeInTheDocument();
+    expect(screen.getByText("src/test.ts")).toBeInTheDocument();
   });
 
   it("renders commit message input", () => {
     render(<CommitDialog {...defaultProps} />);
-    expect(screen.getByPlaceholderText(/commit message/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("describe your changes...")).toBeInTheDocument();
   });
 
   it("calls onClose when cancel is clicked", () => {
@@ -29,26 +29,31 @@ describe("CommitDialog", () => {
     expect(defaultProps.onClose).toHaveBeenCalledOnce();
   });
 
-  it("commit button is disabled when message is empty", () => {
+  it("push button is disabled when message is empty", () => {
     render(<CommitDialog {...defaultProps} />);
-    const commitBtn = screen.getByText(/commit.*push/i).closest("button");
-    expect(commitBtn).toBeDisabled();
+    const pushBtn = screen.getByText("Push").closest("button");
+    expect(pushBtn).toBeDisabled();
   });
 
   it("calls onCommit with message when form is submitted", async () => {
     const onCommit = vi.fn().mockResolvedValue(undefined);
     render(<CommitDialog {...defaultProps} onCommit={onCommit} />);
     
-    const input = screen.getByPlaceholderText(/commit message/i);
+    const input = screen.getByPlaceholderText("describe your changes...");
     fireEvent.change(input, { target: { value: "test commit" } });
     
-    const commitBtn = screen.getByText(/commit.*push/i).closest("button");
-    expect(commitBtn).not.toBeDisabled();
+    const pushBtn = screen.getByText("Push").closest("button");
+    expect(pushBtn).not.toBeDisabled();
     
     await act(async () => {
-      fireEvent.click(commitBtn!);
+      fireEvent.click(pushBtn!);
     });
     
     expect(onCommit).toHaveBeenCalledWith("test commit");
+  });
+
+  it("shows repo info", () => {
+    render(<CommitDialog {...defaultProps} />);
+    expect(screen.getByText("user/repo")).toBeInTheDocument();
   });
 });
