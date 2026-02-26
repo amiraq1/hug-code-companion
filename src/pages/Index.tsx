@@ -347,7 +347,7 @@ const Index = () => {
             {mobileTab === "chat" && (
               <div className="flex-1">
                 <Suspense fallback={<LazyFallback />}>
-                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} projectContext={projectContext} />
+                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} />
                 </Suspense>
               </div>
             )}
