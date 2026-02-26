@@ -188,6 +188,17 @@ const Index = () => {
           >
             <Github className="h-3.5 w-3.5" />
           </button>
+          <button
+            onClick={() => { setRightPanel("git"); setChatVisible(true); }}
+            className={`p-1.5 rounded-md transition-all duration-200 ${
+              rightPanel === "git" && chatVisible
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            }`}
+            title="Git"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 
