@@ -145,6 +145,45 @@ export function useGitHub() {
     [apiCall]
   );
 
+  const listBranches = useCallback(
+    (owner: string, repo: string) =>
+      apiCall("list_branches", { owner, repo }) as Promise<Array<{ name: string; commit: { sha: string } }>>,
+    [apiCall]
+  );
+
+  const createBranch = useCallback(
+    (owner: string, repo: string, branch: string, from = "main") =>
+      apiCall("create_branch", { owner, repo, branch, from }),
+    [apiCall]
+  );
+
+  const deleteBranch = useCallback(
+    (owner: string, repo: string, branch: string) =>
+      apiCall("delete_branch", { owner, repo, branch }),
+    [apiCall]
+  );
+
+  const listCommits = useCallback(
+    (owner: string, repo: string, branch?: string) =>
+      apiCall("list_commits", { owner, repo, branch }) as Promise<Array<{
+        sha: string;
+        commit: {
+          message: string;
+          author: { name: string; date: string };
+        };
+        author?: { login: string; avatar_url: string } | null;
+      }>>,
+    [apiCall]
+  );
+
+  const getStatus = useCallback(
+    (owner: string, repo: string) =>
+      apiCall("get_status", { owner, repo }) as Promise<{
+        files?: Array<{ filename: string; status: string; additions: number; deletions: number }>;
+      }>,
+    [apiCall]
+  );
+
   return {
     connected,
     username,
