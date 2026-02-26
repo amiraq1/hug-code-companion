@@ -8,26 +8,25 @@ interface StatusBarProps {
 
 export function StatusBar({ activeFile, language, lineCount }: StatusBarProps) {
   return (
-    <div className="h-6 bg-ide-statusbar flex items-center justify-between px-3 text-[11px] text-primary-foreground/80 shrink-0">
-      <div className="flex items-center gap-3">
-        <span className="flex items-center gap-1">
-          <GitBranch className="h-3 w-3" />
-          main
+    <div className="h-6 bg-ide-statusbar flex items-center justify-between px-4 text-[10px] font-mono tracking-wide shrink-0 border-t border-border">
+      <div className="flex items-center gap-4 text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <GitBranch className="h-2.5 w-2.5" />
+          <span className="text-foreground/60">main</span>
         </span>
-        <span className="flex items-center gap-1">
-          <Circle className="h-2 w-2 fill-ide-success text-ide-success" />
-          Ready
+        <span className="flex items-center gap-1.5">
+          <Circle className="h-1.5 w-1.5 fill-ide-success text-ide-success" />
+          <span className="text-ide-success/80">ready</span>
         </span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4 text-muted-foreground">
         {activeFile && (
           <>
             <span>Ln {lineCount}</span>
-            <span className="capitalize">{language || "Plain Text"}</span>
+            <span className="uppercase text-foreground/50">{language || "txt"}</span>
           </>
         )}
         <span>UTF-8</span>
-        <span>Spaces: 2</span>
       </div>
     </div>
   );
