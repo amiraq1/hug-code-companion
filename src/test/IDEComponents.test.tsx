@@ -108,9 +108,10 @@ describe("StatusBar", () => {
     expect(screen.getByText("Ln 42")).toBeInTheDocument();
   });
 
-  it("renders language in uppercase", () => {
+  it("renders language", () => {
     render(<StatusBar activeFile="test.ts" language="typescript" lineCount={10} />);
-    expect(screen.getByText("TYPESCRIPT")).toBeInTheDocument();
+    // CSS uppercase class applies visually; DOM text is lowercase
+    expect(screen.getByText("typescript")).toBeInTheDocument();
   });
 
   it("renders UTF-8", () => {

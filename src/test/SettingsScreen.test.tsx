@@ -41,7 +41,8 @@ describe("SettingsScreen", () => {
 
   it("renders Editor tab and its content by default", () => {
     render(<SettingsScreen {...defaultProps} />);
-    expect(screen.getByText("Editor")).toBeInTheDocument();
+    // "Editor" appears as tab + heading
+    expect(screen.getAllByText("Editor")).toHaveLength(2);
     expect(screen.getByText("Font Size")).toBeInTheDocument();
     expect(screen.getByText("Tab Size")).toBeInTheDocument();
     expect(screen.getByText("Word Wrap")).toBeInTheDocument();
