@@ -232,11 +232,13 @@ const Index = () => {
 
         {/* Right Panel */}
         {chatVisible && (
-          <div className="w-80 shrink-0 animate-slide-in-right">
+          <div className="w-80 shrink-0 animate-slide-in-right h-full">
             {rightPanel === "chat" ? (
               <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
-            ) : (
+            ) : rightPanel === "github" ? (
               <GitHubPanel onFileOpen={handleGitHubFileOpen} />
+            ) : (
+              <GitPanel />
             )}
           </div>
         )}
