@@ -267,58 +267,67 @@ const Index = () => {
 
         {/* Mobile Content */}
         <div className="flex-1 overflow-hidden flex flex-col min-h-0" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          {mobileTab === "files" && (
-            <div className="flex-1 overflow-y-auto">
-              <FileExplorer
-                files={files}
-                activeFile={activeFilePath}
-                onFileSelect={handleFileSelect}
-              />
-            </div>
-          )}
-
-          {mobileTab === "editor" && (
-            <div className="flex-1 flex flex-col min-h-0">
-              <TabBar
-                openFiles={openFiles}
-                activeFile={activeFilePath}
-                onTabSelect={setActiveFilePath}
-                onTabClose={handleTabClose}
-                onCommitFile={setCommitDialogPath}
-              />
-              <Suspense fallback={<LazyFallback />}>
-                <CodeEditor
-                  file={activeFile}
-                  onContentChange={handleContentChange}
-                  settings={editorSettings}
+          <div
+            key={mobileTab}
+            className={`flex-1 flex flex-col min-h-0 ${
+              slideDirection === "left" ? "animate-slide-from-right" :
+              slideDirection === "right" ? "animate-slide-from-left" :
+              "animate-fade-in"
+            }`}
+          >
+            {mobileTab === "files" && (
+              <div className="flex-1 overflow-y-auto">
+                <FileExplorer
+                  files={files}
+                  activeFile={activeFilePath}
+                  onFileSelect={handleFileSelect}
                 />
-              </Suspense>
-            </div>
-          )}
+              </div>
+            )}
 
-          {mobileTab === "preview" && (
-            <div className="flex-1">
-              <Suspense fallback={<LazyFallback />}>
-                <PreviewPanel file={activeFile} />
-              </Suspense>
-            </div>
-          )}
+            {mobileTab === "editor" && (
+              <>
+                <TabBar
+                  openFiles={openFiles}
+                  activeFile={activeFilePath}
+                  onTabSelect={setActiveFilePath}
+                  onTabClose={handleTabClose}
+                  onCommitFile={setCommitDialogPath}
+                />
+                <Suspense fallback={<LazyFallback />}>
+                  <CodeEditor
+                    file={activeFile}
+                    onContentChange={handleContentChange}
+                    settings={editorSettings}
+                  />
+                </Suspense>
+              </>
+            )}
 
-          {mobileTab === "chat" && (
-            <div className="flex-1">
-              <Suspense fallback={<LazyFallback />}>
-                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
-              </Suspense>
-            </div>
-          )}
+            {mobileTab === "preview" && (
+              <div className="flex-1">
+                <Suspense fallback={<LazyFallback />}>
+                  <PreviewPanel file={activeFile} />
+                </Suspense>
+              </div>
+            )}
 
-          {mobileTab === "git" && (
-            <div className="flex-1 overflow-y-auto">
-              <Suspense fallback={<LazyFallback />}>
-                <GitPanel />
-              </Suspense>
-            </div>
-          )}
+            {mobileTab === "chat" && (
+              <div className="flex-1">
+                <Suspense fallback={<LazyFallback />}>
+                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
+                </Suspense>
+              </div>
+            )}
+
+            {mobileTab === "git" && (
+              <div className="flex-1 overflow-y-auto">
+                <Suspense fallback={<LazyFallback />}>
+                  <GitPanel />
+                </Suspense>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile Bottom Nav */}
