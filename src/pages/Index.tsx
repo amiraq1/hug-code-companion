@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSwipe } from "@/hooks/useSwipe";
+import { useSwipe, type SwipeDirection } from "@/hooks/useSwipe";
 import { LoginScreen } from "@/components/screens/LoginScreen";
 import { ReposScreen } from "@/components/screens/ReposScreen";
 import {
