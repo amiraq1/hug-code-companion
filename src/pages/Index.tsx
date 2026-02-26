@@ -6,7 +6,8 @@ import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
 import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
-import { Code2, MessageSquare, PanelLeftClose, PanelLeft } from "lucide-react";
+import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github } from "lucide-react";
+import { GitHubPanel } from "@/components/ide/GitHubPanel";
 
 const Index = () => {
   const [files, setFiles] = useState<FileNode[]>(DEFAULT_FILES);
