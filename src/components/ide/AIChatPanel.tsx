@@ -21,6 +21,33 @@ interface AIChatPanelProps {
   projectContext?: ProjectContext;
 }
 
+function CodeBlockWithInsert({ code, className, onInsert }: { code: string; className?: string; onInsert?: (code: string) => void }) {
+  const [inserted, setInserted] = useState(false);
+  const handleInsert = () => {
+    if (onInsert) {
+      onInsert(code);
+      setInserted(true);
+      toast.success("تم إدراج الكود في المحرر");
+      setTimeout(() => setInserted(false), 2000);
+    }
+  };
+  return (
+    <div className="relative group">
+      <code className={className}>{code}</code>
+      {onInsert && (
+        <button
+          onClick={handleInsert}
+          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 text-primary text-[10px] font-mono border border-primary/20"
+          title="إدراج في المحرر"
+        >
+          {inserted ? <Check className="h-3 w-3" /> : <ClipboardPaste className="h-3 w-3" />}
+          {inserted ? "تم" : "إدراج"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsertCode, projectContext }: AIChatPanelProps) {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
