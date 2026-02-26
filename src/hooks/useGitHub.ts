@@ -1,14 +1,21 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthStore } from "@/stores/authStore";
 
-const SESSION_KEY = "github_session_id";
-
+/** Get session ID from auth store's secure storage */
 function getSessionId(): string {
-  let id = localStorage.getItem(SESSION_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(SESSION_KEY, id);
+  // Read from secure storage (same key as authStore)
+  const SESSION_KEY = "hc_session_id";
+  const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+  if (raw) {
+    try {
+      return decodeURIComponent(atob(raw).split("").reverse().join(""));
+    } catch {}
   }
+  // Fallback
+  const id = crypto.randomUUID();
+  const encoded = btoa(encodeURIComponent(id).split("").reverse().join(""));
+  localStorage.setItem(SESSION_KEY, encoded);
   return id;
 }
 
