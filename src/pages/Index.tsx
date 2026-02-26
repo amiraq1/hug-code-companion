@@ -157,6 +157,17 @@ const Index = () => {
           </button>
           <div className="w-px h-4 bg-border mx-1" />
           <button
+            onClick={() => setPreviewVisible(!previewVisible)}
+            className={`p-1.5 rounded-md transition-all duration-200 ${
+              previewVisible
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            }`}
+            title="Preview"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+          <button
             onClick={() => { setRightPanel("chat"); setChatVisible(true); }}
             className={`p-1.5 rounded-md transition-all duration-200 ${
               rightPanel === "chat" && chatVisible
