@@ -23,7 +23,7 @@ function getMonacoLanguage(lang?: string): string {
   }
 }
 
-export function CodeEditor({ file, onContentChange }: CodeEditorProps) {
+export function CodeEditor({ file, onContentChange, settings }: CodeEditorProps) {
   if (!file) {
     return (
       <div className="flex-1 flex items-center justify-center bg-ide-editor">
