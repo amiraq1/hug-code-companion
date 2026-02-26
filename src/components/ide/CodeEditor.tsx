@@ -1,9 +1,11 @@
 import Editor from "@monaco-editor/react";
 import type { FileNode } from "@/stores/editorStore";
+import type { EditorSettings } from "@/components/screens/SettingsScreen";
 
 interface CodeEditorProps {
   file: FileNode | null;
   onContentChange: (path: string, content: string) => void;
+  settings?: EditorSettings;
 }
 
 function getMonacoLanguage(lang?: string): string {
@@ -21,7 +23,7 @@ function getMonacoLanguage(lang?: string): string {
   }
 }
 
-export function CodeEditor({ file, onContentChange }: CodeEditorProps) {
+export function CodeEditor({ file, onContentChange, settings }: CodeEditorProps) {
   if (!file) {
     return (
       <div className="flex-1 flex items-center justify-center bg-ide-editor">
@@ -42,20 +44,20 @@ export function CodeEditor({ file, onContentChange }: CodeEditorProps) {
         onChange={(value) => onContentChange(file.path, value || "")}
         theme="vs-dark"
         options={{
-          fontSize: 13,
+          fontSize: settings?.fontSize ?? 13,
           fontFamily: "'IBM Plex Mono', monospace",
           fontLigatures: true,
-          minimap: { enabled: true, scale: 1, renderCharacters: false },
+          minimap: { enabled: settings?.minimap ?? true, scale: 1, renderCharacters: false },
           padding: { top: 16, bottom: 16 },
           scrollBeyondLastLine: false,
           smoothScrolling: true,
           cursorBlinking: "smooth",
           cursorSmoothCaretAnimation: "on",
           renderLineHighlight: "gutter",
-          bracketPairColorization: { enabled: true },
-          lineNumbers: "on",
-          wordWrap: "on",
-          tabSize: 2,
+          bracketPairColorization: { enabled: settings?.bracketPairs ?? true },
+          lineNumbers: (settings?.lineNumbers ?? true) ? "on" : "off",
+          wordWrap: (settings?.wordWrap ?? true) ? "on" : "off",
+          tabSize: settings?.tabSize ?? 2,
           lineHeight: 1.7,
           letterSpacing: 0.3,
           guides: {

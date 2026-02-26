@@ -7,13 +7,32 @@ import { StatusBar } from "@/components/ide/StatusBar";
 import { CommitDialog } from "@/components/ide/CommitDialog";
 import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
-import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github, Eye, GitBranch } from "lucide-react";
+import {
+  MessageSquare,
+  PanelLeftClose,
+  PanelLeft,
+  Github,
+  Eye,
+  GitBranch,
+  Settings,
+  FolderGit2,
+} from "lucide-react";
 import { PreviewPanel } from "@/components/ide/PreviewPanel";
 import { GitPanel } from "@/components/ide/GitPanel";
 import { GitHubPanel } from "@/components/ide/GitHubPanel";
-import { useGitHub } from "@/hooks/useGitHub";
+import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
+import { LoginScreen } from "@/components/screens/LoginScreen";
+import { ReposScreen } from "@/components/screens/ReposScreen";
+import {
+  SettingsScreen,
+  DEFAULT_EDITOR_SETTINGS,
+  type EditorSettings,
+} from "@/components/screens/SettingsScreen";
+
+type AppScreen = "login" | "repos" | "editor" | "settings";
 
 const Index = () => {
+  const [screen, setScreen] = useState<AppScreen>("login");
   const [files, setFiles] = useState<FileNode[]>(DEFAULT_FILES);
   const [activeFilePath, setActiveFilePath] = useState<string | null>("src/App.tsx");
   const [openFilePaths, setOpenFilePaths] = useState<string[]>(["src/App.tsx"]);
@@ -22,22 +41,26 @@ const Index = () => {
   const [rightPanel, setRightPanel] = useState<"chat" | "github" | "git">("chat");
   const [previewVisible, setPreviewVisible] = useState(false);
   const [commitDialogPath, setCommitDialogPath] = useState<string | null>(null);
+  const [editorSettings, setEditorSettings] = useState<EditorSettings>(DEFAULT_EDITOR_SETTINGS);
+  const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
   const { commitFile } = useGitHub();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
       role: "assistant",
-      content: "👋 Welcome to **Code Agent Studio**! I'm your AI coding assistant. I can help you:\n\n- ✏️ Write & refactor code\n- 🐛 Debug issues\n- 📖 Explain concepts\n- 🏗️ Architect solutions\n\nWhat would you like to work on?",
+      content:
+        "👋 Welcome to **Code Agent Studio**! I'm your AI coding assistant. I can help you:\n\n- ✏️ Write & refactor code\n- 🐛 Debug issues\n- 📖 Explain concepts\n- 🏗️ Architect solutions\n\nWhat would you like to work on?",
       timestamp: new Date(),
     },
   ]);
 
   const allFiles = flattenFiles(files);
-
   const activeFile = allFiles.find((f) => f.path === activeFilePath) || null;
   const openFiles = openFilePaths
     .map((p) => allFiles.find((f) => f.path === p))
     .filter(Boolean) as FileNode[];
+
+  // ── Handlers ──
 
   const handleFileSelect = useCallback((path: string) => {
     setActiveFilePath(path);
@@ -75,8 +98,6 @@ const Index = () => {
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMsg]);
-
-    // Simulated AI response
     setTimeout(() => {
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -88,59 +109,94 @@ const Index = () => {
     }, 800);
   }, []);
 
-  const handleGitHubFileOpen = useCallback((path: string, content: string, language: string) => {
-    // Add the GitHub file to the file tree as a virtual file
-    const fileName = path.split("/").pop() || path;
-    const newFile: FileNode = {
-      name: `🔗 ${fileName}`,
-      path,
-      type: "file",
-      language,
-      content,
-    };
-    setFiles((prev) => {
-      // Check if file already exists
-      const allExisting = flattenFiles(prev);
-      if (allExisting.some((f) => f.path === path)) {
-        // Update content
-        const updateNode = (nodes: FileNode[]): FileNode[] =>
-          nodes.map((node) => {
-            if (node.path === path) return { ...node, content };
-            if (node.children) return { ...node, children: updateNode(node.children) };
-            return node;
-          });
-        return updateNode(prev);
-      }
-      // Add as top-level file
-      return [...prev, newFile];
-    });
-    setActiveFilePath(path);
-    setOpenFilePaths((prevPaths) => (prevPaths.includes(path) ? prevPaths : [...prevPaths, path]));
+  const handleGitHubFileOpen = useCallback(
+    (path: string, content: string, language: string) => {
+      const fileName = path.split("/").pop() || path;
+      const newFile: FileNode = {
+        name: `🔗 ${fileName}`,
+        path,
+        type: "file",
+        language,
+        content,
+      };
+      setFiles((prev) => {
+        const allExisting = flattenFiles(prev);
+        if (allExisting.some((f) => f.path === path)) {
+          const updateNode = (nodes: FileNode[]): FileNode[] =>
+            nodes.map((node) => {
+              if (node.path === path) return { ...node, content };
+              if (node.children) return { ...node, children: updateNode(node.children) };
+              return node;
+            });
+          return updateNode(prev);
+        }
+        return [...prev, newFile];
+      });
+      setActiveFilePath(path);
+      setOpenFilePaths((prevPaths) =>
+        prevPaths.includes(path) ? prevPaths : [...prevPaths, path]
+      );
+    },
+    []
+  );
+
+  const handleCommitGitHubFile = useCallback(
+    async (message: string) => {
+      if (!commitDialogPath) return;
+      const stripped = commitDialogPath.replace("github:", "");
+      const parts = stripped.split("/");
+      const owner = parts[0];
+      const repo = parts[1];
+      const filePath = parts.slice(2).join("/");
+      const allCurrent = flattenFiles(files);
+      const file = allCurrent.find((f) => f.path === commitDialogPath);
+      if (!file?.content) return;
+      await commitFile(owner, repo, filePath, file.content, message);
+      setCommitDialogPath(null);
+    },
+    [commitDialogPath, files, commitFile]
+  );
+
+  const handleSelectRepo = useCallback((repo: GitHubRepo) => {
+    setSelectedGitHubRepo(repo);
+    setScreen("editor");
+    // Auto-switch to GitHub panel
+    setRightPanel("github");
+    setChatVisible(true);
   }, []);
-
-  const handleCommitGitHubFile = useCallback(async (message: string) => {
-    if (!commitDialogPath) return;
-    // Parse "github:owner/repo/path/to/file"
-    const stripped = commitDialogPath.replace("github:", "");
-    const parts = stripped.split("/");
-    const owner = parts[0];
-    const repo = parts[1];
-    const filePath = parts.slice(2).join("/");
-
-    // Get current content from files
-    const allCurrent = flattenFiles(files);
-    const file = allCurrent.find((f) => f.path === commitDialogPath);
-    if (!file?.content) return;
-
-    await commitFile(owner, repo, filePath, file.content, message);
-    setCommitDialogPath(null);
-  }, [commitDialogPath, files, commitFile]);
 
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
+  // ── Screen Router ──
+
+  if (screen === "login") {
+    return <LoginScreen onContinue={() => setScreen("editor")} />;
+  }
+
+  if (screen === "repos") {
+    return (
+      <ReposScreen
+        onSelectRepo={handleSelectRepo}
+        onBack={() => setScreen("editor")}
+      />
+    );
+  }
+
+  if (screen === "settings") {
+    return (
+      <SettingsScreen
+        onBack={() => setScreen("editor")}
+        editorSettings={editorSettings}
+        onSettingsChange={setEditorSettings}
+      />
+    );
+  }
+
+  // ── Editor Screen ──
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background grain-overlay">
-      {/* Title Bar — asymmetric, typographic */}
+      {/* Title Bar */}
       <div className="h-10 bg-ide-sidebar border-b border-border flex items-center px-4 gap-3 shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
@@ -150,13 +206,36 @@ const Index = () => {
         </div>
         <div className="flex-1" />
         <div className="flex items-center gap-0.5">
+          {/* Repos */}
+          <button
+            onClick={() => setScreen("repos")}
+            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+            title="Repositories"
+          >
+            <FolderGit2 className="h-3.5 w-3.5" />
+          </button>
+          {/* Settings */}
+          <button
+            onClick={() => setScreen("settings")}
+            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+            title="Settings"
+          >
+            <Settings className="h-3.5 w-3.5" />
+          </button>
+          <div className="w-px h-4 bg-border mx-1" />
+          {/* Sidebar Toggle */}
           <button
             onClick={() => setSidebarVisible(!sidebarVisible)}
             className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
           >
-            {sidebarVisible ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeft className="h-3.5 w-3.5" />}
+            {sidebarVisible ? (
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            ) : (
+              <PanelLeft className="h-3.5 w-3.5" />
+            )}
           </button>
           <div className="w-px h-4 bg-border mx-1" />
+          {/* Preview */}
           <button
             onClick={() => setPreviewVisible(!previewVisible)}
             className={`p-1.5 rounded-md transition-all duration-200 ${
@@ -168,8 +247,16 @@ const Index = () => {
           >
             <Eye className="h-3.5 w-3.5" />
           </button>
+          {/* Chat */}
           <button
-            onClick={() => { setRightPanel("chat"); setChatVisible(true); }}
+            onClick={() => {
+              if (rightPanel === "chat" && chatVisible) {
+                setChatVisible(false);
+              } else {
+                setRightPanel("chat");
+                setChatVisible(true);
+              }
+            }}
             className={`p-1.5 rounded-md transition-all duration-200 ${
               rightPanel === "chat" && chatVisible
                 ? "bg-primary/10 text-primary"
@@ -178,8 +265,16 @@ const Index = () => {
           >
             <MessageSquare className="h-3.5 w-3.5" />
           </button>
+          {/* GitHub */}
           <button
-            onClick={() => { setRightPanel("github"); setChatVisible(true); }}
+            onClick={() => {
+              if (rightPanel === "github" && chatVisible) {
+                setChatVisible(false);
+              } else {
+                setRightPanel("github");
+                setChatVisible(true);
+              }
+            }}
             className={`p-1.5 rounded-md transition-all duration-200 ${
               rightPanel === "github" && chatVisible
                 ? "bg-primary/10 text-primary"
@@ -188,8 +283,16 @@ const Index = () => {
           >
             <Github className="h-3.5 w-3.5" />
           </button>
+          {/* Git */}
           <button
-            onClick={() => { setRightPanel("git"); setChatVisible(true); }}
+            onClick={() => {
+              if (rightPanel === "git" && chatVisible) {
+                setChatVisible(false);
+              } else {
+                setRightPanel("git");
+                setChatVisible(true);
+              }
+            }}
             className={`p-1.5 rounded-md transition-all duration-200 ${
               rightPanel === "git" && chatVisible
                 ? "bg-primary/10 text-primary"
@@ -207,7 +310,11 @@ const Index = () => {
         {/* Sidebar */}
         {sidebarVisible && (
           <div className="w-56 shrink-0 animate-fade-in">
-            <FileExplorer files={files} activeFile={activeFilePath} onFileSelect={handleFileSelect} />
+            <FileExplorer
+              files={files}
+              activeFile={activeFilePath}
+              onFileSelect={handleFileSelect}
+            />
           </div>
         )}
 
@@ -220,7 +327,11 @@ const Index = () => {
             onTabClose={handleTabClose}
             onCommitFile={setCommitDialogPath}
           />
-          <CodeEditor file={activeFile} onContentChange={handleContentChange} />
+          <CodeEditor
+            file={activeFile}
+            onContentChange={handleContentChange}
+            settings={editorSettings}
+          />
         </div>
 
         {/* Preview Panel */}
