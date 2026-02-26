@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Sparkles, Loader2, Square } from "lucide-react";
+import { Send, Bot, User, Sparkles, Loader2, Square, ClipboardPaste, Check } from "lucide-react";
 import type { ChatMessage } from "@/stores/editorStore";
 import type { FileNode } from "@/stores/editorStore";
 import ReactMarkdown from "react-markdown";
+import { toast } from "sonner";
 
 const CODE_ASSIST_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/code-assist`;
 
