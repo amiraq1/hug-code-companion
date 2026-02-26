@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { FileExplorer } from "@/components/ide/FileExplorer";
 import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
