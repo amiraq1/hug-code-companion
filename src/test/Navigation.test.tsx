@@ -123,7 +123,7 @@ describe("Editor Features", () => {
     expect(screen.getByText("UTF-8")).toBeInTheDocument();
   });
 
-  it("shows AI chat panel by default", () => {
-    expect(screen.getByText(/Code Agent Studio/)).toBeInTheDocument();
+  it("shows title bar branding", () => {
+    expect(screen.getByText("agent")).toBeInTheDocument();
   });
 });
