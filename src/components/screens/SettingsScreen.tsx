@@ -235,9 +235,9 @@ export function SettingsScreen({ onBack, editorSettings, onSettingsChange }: Set
 
                 <div className="bg-card border border-border rounded-xl p-5 space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+                    <img src="/app-icon.png" alt="HugCode" className="w-8 h-8 rounded-lg" />
                     <span className="text-xl font-display font-bold text-foreground">
-                      code<span className="text-primary">agent</span>
+                      Hug<span className="text-primary">Code</span>
                     </span>
                   </div>
 

@@ -371,9 +371,9 @@ const Index = () => {
       {/* Title Bar */}
       <div className="h-10 bg-ide-sidebar border-b border-border flex items-center px-4 gap-3 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
+          <img src="/app-icon.png" alt="" className="w-5 h-5 rounded" />
           <span className="text-[13px] font-display font-semibold tracking-tight text-foreground">
-            code<span className="text-primary">agent</span>
+            Hug<span className="text-primary">Code</span>
           </span>
         </div>
         <div className="flex-1" />
