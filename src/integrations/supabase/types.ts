@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_tasks: {
+        Row: {
+          assignee: string | null
+          created_at: string
+          deadline_days: number | null
+          description: string | null
+          estimated_hours: number | null
+          id: string
+          parent_task_id: string | null
+          priority: string
+          project_id: string
+          status: string
+          step_order: number
+          title: string
+        }
+        Insert: {
+          assignee?: string | null
+          created_at?: string
+          deadline_days?: number | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          parent_task_id?: string | null
+          priority?: string
+          project_id: string
+          status?: string
+          step_order?: number
+          title: string
+        }
+        Update: {
+          assignee?: string | null
+          created_at?: string
+          deadline_days?: number | null
+          description?: string | null
+          estimated_hours?: number | null
+          id?: string
+          parent_task_id?: string | null
+          priority?: string
+          project_id?: string
+          status?: string
+          step_order?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "ai_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       github_tokens: {
         Row: {
           access_token: string
@@ -36,6 +96,33 @@ export type Database = {
           created_at?: string
           github_username?: string | null
           id?: string
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
           session_id?: string
           updated_at?: string
         }
