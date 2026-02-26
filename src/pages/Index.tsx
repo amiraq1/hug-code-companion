@@ -245,9 +245,9 @@ const Index = () => {
         {/* Mobile Header */}
         <div className="h-11 bg-ide-sidebar border-b border-border flex items-center px-3 gap-2 shrink-0">
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse-glow" />
+            <img src="/app-icon.png" alt="" className="w-5 h-5 rounded" />
             <span className="text-xs font-display font-semibold tracking-tight text-foreground">
-              code<span className="text-primary">agent</span>
+              Hug<span className="text-primary">Code</span>
             </span>
           </div>
           <div className="flex-1" />
