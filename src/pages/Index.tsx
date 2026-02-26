@@ -4,10 +4,12 @@ import { CodeEditor } from "@/components/ide/CodeEditor";
 import { AIChatPanel } from "@/components/ide/AIChatPanel";
 import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
+import { CommitDialog } from "@/components/ide/CommitDialog";
 import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
 import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github } from "lucide-react";
 import { GitHubPanel } from "@/components/ide/GitHubPanel";
+import { useGitHub } from "@/hooks/useGitHub";
 
 const Index = () => {
   const [files, setFiles] = useState<FileNode[]>(DEFAULT_FILES);
@@ -16,6 +18,8 @@ const Index = () => {
   const [chatVisible, setChatVisible] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [rightPanel, setRightPanel] = useState<"chat" | "github">("chat");
+  const [commitDialogPath, setCommitDialogPath] = useState<string | null>(null);
+  const { commitFile } = useGitHub();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "1",
@@ -111,6 +115,24 @@ const Index = () => {
     setOpenFilePaths((prevPaths) => (prevPaths.includes(path) ? prevPaths : [...prevPaths, path]));
   }, []);
 
+  const handleCommitGitHubFile = useCallback(async (message: string) => {
+    if (!commitDialogPath) return;
+    // Parse "github:owner/repo/path/to/file"
+    const stripped = commitDialogPath.replace("github:", "");
+    const parts = stripped.split("/");
+    const owner = parts[0];
+    const repo = parts[1];
+    const filePath = parts.slice(2).join("/");
+
+    // Get current content from files
+    const allCurrent = flattenFiles(files);
+    const file = allCurrent.find((f) => f.path === commitDialogPath);
+    if (!file?.content) return;
+
+    await commitFile(owner, repo, filePath, file.content, message);
+    setCommitDialogPath(null);
+  }, [commitDialogPath, files, commitFile]);
+
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
   return (
@@ -156,6 +178,7 @@ const Index = () => {
             activeFile={activeFilePath}
             onTabSelect={setActiveFilePath}
             onTabClose={handleTabClose}
+            onCommitFile={setCommitDialogPath}
           />
           <CodeEditor file={activeFile} onContentChange={handleContentChange} />
         </div>
@@ -178,6 +201,15 @@ const Index = () => {
         language={activeFile?.language || ""}
         lineCount={lineCount}
       />
+
+      {/* Commit Dialog */}
+      {commitDialogPath && (
+        <CommitDialog
+          filePath={commitDialogPath}
+          onCommit={handleCommitGitHubFile}
+          onClose={() => setCommitDialogPath(null)}
+        />
+      )}
     </div>
   );
 };
