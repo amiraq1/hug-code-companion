@@ -239,6 +239,15 @@ const Index = () => {
     );
   }
 
+  if (screen === "ai-planner") {
+    return (
+      <AIProjectPlanner
+        onBack={() => setScreen("editor")}
+        sessionId={localStorage.getItem("hugcode_session") || "default"}
+      />
+    );
+  }
+
   // Mobile layout
   if (isMobile) {
     return (
