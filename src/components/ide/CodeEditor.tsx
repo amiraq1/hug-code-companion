@@ -1,9 +1,11 @@
 import Editor from "@monaco-editor/react";
 import type { FileNode } from "@/stores/editorStore";
+import type { EditorSettings } from "@/components/screens/SettingsScreen";
 
 interface CodeEditorProps {
   file: FileNode | null;
   onContentChange: (path: string, content: string) => void;
+  settings?: EditorSettings;
 }
 
 function getMonacoLanguage(lang?: string): string {
