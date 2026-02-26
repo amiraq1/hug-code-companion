@@ -195,5 +195,10 @@ export function useGitHub() {
     getFile,
     commitFile,
     createRepo,
+    listBranches,
+    createBranch,
+    deleteBranch,
+    listCommits,
+    getStatus,
   };
 }
