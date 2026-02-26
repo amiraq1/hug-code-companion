@@ -7,7 +7,8 @@ import { StatusBar } from "@/components/ide/StatusBar";
 import { CommitDialog } from "@/components/ide/CommitDialog";
 import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
-import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github } from "lucide-react";
+import { Code2, MessageSquare, PanelLeftClose, PanelLeft, Github, Eye } from "lucide-react";
+import { PreviewPanel } from "@/components/ide/PreviewPanel";
 import { GitHubPanel } from "@/components/ide/GitHubPanel";
 import { useGitHub } from "@/hooks/useGitHub";
 
@@ -18,6 +19,7 @@ const Index = () => {
   const [chatVisible, setChatVisible] = useState(true);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [rightPanel, setRightPanel] = useState<"chat" | "github">("chat");
+  const [previewVisible, setPreviewVisible] = useState(false);
   const [commitDialogPath, setCommitDialogPath] = useState<string | null>(null);
   const { commitFile } = useGitHub();
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -155,6 +157,17 @@ const Index = () => {
           </button>
           <div className="w-px h-4 bg-border mx-1" />
           <button
+            onClick={() => setPreviewVisible(!previewVisible)}
+            className={`p-1.5 rounded-md transition-all duration-200 ${
+              previewVisible
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            }`}
+            title="Preview"
+          >
+            <Eye className="h-3.5 w-3.5" />
+          </button>
+          <button
             onClick={() => { setRightPanel("chat"); setChatVisible(true); }}
             className={`p-1.5 rounded-md transition-all duration-200 ${
               rightPanel === "chat" && chatVisible
@@ -197,6 +210,13 @@ const Index = () => {
           />
           <CodeEditor file={activeFile} onContentChange={handleContentChange} />
         </div>
+
+        {/* Preview Panel */}
+        {previewVisible && (
+          <div className="w-[45%] shrink-0 animate-slide-in-right">
+            <PreviewPanel file={activeFile} />
+          </div>
+        )}
 
         {/* Right Panel */}
         {chatVisible && (
