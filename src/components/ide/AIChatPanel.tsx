@@ -21,7 +21,7 @@ interface AIChatPanelProps {
   projectContext?: ProjectContext;
 }
 
-export function AIChatPanel({ messages, onSendMessage, onStreamMessage, projectContext }: AIChatPanelProps) {
+export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsertCode, projectContext }: AIChatPanelProps) {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
