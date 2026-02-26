@@ -395,6 +395,13 @@ const Index = () => {
         <div className="flex-1" />
         <div className="flex items-center gap-0.5">
           <button
+            onClick={() => setScreen("ai-planner")}
+            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+            title="AI Project Planner"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+          </button>
+          <button
             onClick={() => setScreen("repos")}
             className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
             title="Repositories"
