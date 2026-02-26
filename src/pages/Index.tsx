@@ -246,7 +246,7 @@ const Index = () => {
         </div>
 
         {/* Mobile Content */}
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0" {...swipeHandlers}>
           {mobileTab === "files" && (
             <div className="flex-1 overflow-y-auto">
               <FileExplorer
