@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   GitBranch,
   Github,
@@ -15,7 +15,11 @@ import {
 } from "lucide-react";
 import { useGitHub, type GitHubRepo, type GitHubContent } from "@/hooks/useGitHub";
 
-export function GitHubPanel() {
+interface GitHubPanelProps {
+  onFileOpen?: (path: string, content: string, language: string) => void;
+}
+
+export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
   const {
     connected,
     username,
@@ -239,8 +243,32 @@ export function GitHubPanel() {
             {contents.map((item) => (
               <button
                 key={item.sha}
-                onClick={() => {
-                  if (item.type === "dir") navigateToDir(item.path);
+                onClick={async () => {
+                  if (item.type === "dir") {
+                    navigateToDir(item.path);
+                  } else if (selectedRepo && onFileOpen) {
+                    // Fetch file content and open in editor
+                    try {
+                      const [owner, repoName] = selectedRepo.full_name.split("/");
+                      const fileData = await getFile(owner, repoName, item.path);
+                      if (fileData?.content && fileData?.encoding === "base64") {
+                        const decoded = atob(fileData.content.replace(/\n/g, ""));
+                        const ext = item.name.split(".").pop() || "";
+                        const langMap: Record<string, string> = {
+                          ts: "typescript", tsx: "typescript", js: "typescript", jsx: "typescript",
+                          json: "json", md: "markdown", css: "css", html: "html",
+                          py: "python", rs: "rust", go: "go", yml: "yaml", yaml: "yaml",
+                        };
+                        onFileOpen(
+                          `github:${selectedRepo.full_name}/${item.path}`,
+                          decoded,
+                          langMap[ext] || "plaintext"
+                        );
+                      }
+                    } catch (err) {
+                      console.error("Failed to load file:", err);
+                    }
+                  }
                 }}
                 className="w-full text-left px-3 py-1 hover:bg-secondary/50 transition-colors flex items-center gap-2 text-sm"
               >

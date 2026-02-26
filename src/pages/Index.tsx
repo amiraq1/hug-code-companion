@@ -81,6 +81,36 @@ const Index = () => {
     }, 800);
   }, []);
 
+  const handleGitHubFileOpen = useCallback((path: string, content: string, language: string) => {
+    // Add the GitHub file to the file tree as a virtual file
+    const fileName = path.split("/").pop() || path;
+    const newFile: FileNode = {
+      name: `🔗 ${fileName}`,
+      path,
+      type: "file",
+      language,
+      content,
+    };
+    setFiles((prev) => {
+      // Check if file already exists
+      const allExisting = flattenFiles(prev);
+      if (allExisting.some((f) => f.path === path)) {
+        // Update content
+        const updateNode = (nodes: FileNode[]): FileNode[] =>
+          nodes.map((node) => {
+            if (node.path === path) return { ...node, content };
+            if (node.children) return { ...node, children: updateNode(node.children) };
+            return node;
+          });
+        return updateNode(prev);
+      }
+      // Add as top-level file
+      return [...prev, newFile];
+    });
+    setActiveFilePath(path);
+    setOpenFilePaths((prevPaths) => (prevPaths.includes(path) ? prevPaths : [...prevPaths, path]));
+  }, []);
+
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
   return (
@@ -136,7 +166,7 @@ const Index = () => {
             {rightPanel === "chat" ? (
               <AIChatPanel messages={messages} onSendMessage={handleSendMessage} />
             ) : (
-              <GitHubPanel />
+              <GitHubPanel onFileOpen={handleGitHubFileOpen} />
             )}
           </div>
         )}
