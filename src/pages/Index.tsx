@@ -559,18 +559,5 @@ const Index = () => {
   );
 };
 
-function generateResponse(input: string): string {
-  const lower = input.toLowerCase();
-  if (lower.includes("hello") || lower.includes("hi")) {
-    return "Hey there! 👋 Ready to code. What are you building today?";
-  }
-  if (lower.includes("help")) {
-    return "I can help with:\n\n```\n• Writing new components\n• Debugging errors\n• Code reviews\n• Explaining concepts\n```\n\nJust describe what you need!";
-  }
-  if (lower.includes("react") || lower.includes("component")) {
-    return "Here's a quick React component pattern:\n\n```tsx\ninterface Props {\n  title: string;\n  onClick: () => void;\n}\n\nexport function MyComponent({ title, onClick }: Props) {\n  return (\n    <button onClick={onClick}>\n      {title}\n    </button>\n  );\n}\n```\n\nWant me to customize this for your use case?";
-  }
-  return "I understand! Let me think about that...\n\nI'd suggest breaking this into smaller steps. What specific part would you like to tackle first?";
-}
 
 export default Index;
