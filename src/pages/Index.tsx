@@ -97,10 +97,16 @@ const Index = () => {
           {sidebarVisible ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeft className="h-3.5 w-3.5" />}
         </button>
         <button
-          onClick={() => setChatVisible(!chatVisible)}
-          className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+          onClick={() => { setRightPanel("chat"); setChatVisible(true); }}
+          className={`p-1 rounded hover:bg-secondary transition-colors ${rightPanel === "chat" && chatVisible ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
         >
           <MessageSquare className="h-3.5 w-3.5" />
+        </button>
+        <button
+          onClick={() => { setRightPanel("github"); setChatVisible(true); }}
+          className={`p-1 rounded hover:bg-secondary transition-colors ${rightPanel === "github" && chatVisible ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          <Github className="h-3.5 w-3.5" />
         </button>
       </div>
 
