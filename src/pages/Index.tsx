@@ -211,6 +211,13 @@ const Index = () => {
           <CodeEditor file={activeFile} onContentChange={handleContentChange} />
         </div>
 
+        {/* Preview Panel */}
+        {previewVisible && (
+          <div className="w-[45%] shrink-0 animate-slide-in-right">
+            <PreviewPanel file={activeFile} />
+          </div>
+        )}
+
         {/* Right Panel */}
         {chatVisible && (
           <div className="w-80 shrink-0 animate-slide-in-right">
