@@ -44,20 +44,20 @@ export function CodeEditor({ file, onContentChange, settings }: CodeEditorProps)
         onChange={(value) => onContentChange(file.path, value || "")}
         theme="vs-dark"
         options={{
-          fontSize: 13,
+          fontSize: settings?.fontSize ?? 13,
           fontFamily: "'IBM Plex Mono', monospace",
           fontLigatures: true,
-          minimap: { enabled: true, scale: 1, renderCharacters: false },
+          minimap: { enabled: settings?.minimap ?? true, scale: 1, renderCharacters: false },
           padding: { top: 16, bottom: 16 },
           scrollBeyondLastLine: false,
           smoothScrolling: true,
           cursorBlinking: "smooth",
           cursorSmoothCaretAnimation: "on",
           renderLineHighlight: "gutter",
-          bracketPairColorization: { enabled: true },
-          lineNumbers: "on",
-          wordWrap: "on",
-          tabSize: 2,
+          bracketPairColorization: { enabled: settings?.bracketPairs ?? true },
+          lineNumbers: (settings?.lineNumbers ?? true) ? "on" : "off",
+          wordWrap: (settings?.wordWrap ?? true) ? "on" : "off",
+          tabSize: settings?.tabSize ?? 2,
           lineHeight: 1.7,
           letterSpacing: 0.3,
           guides: {
