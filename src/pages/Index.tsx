@@ -59,6 +59,18 @@ const Index = () => {
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(DEFAULT_EDITOR_SETTINGS);
   const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
+  const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: () => setMobileTab(prev => {
+      const i = MOBILE_TABS.indexOf(prev);
+      return i < MOBILE_TABS.length - 1 ? MOBILE_TABS[i + 1] : prev;
+    }),
+    onSwipeRight: () => setMobileTab(prev => {
+      const i = MOBILE_TABS.indexOf(prev);
+      return i > 0 ? MOBILE_TABS[i - 1] : prev;
+    }),
+    threshold: 60,
+  });
   const { commitFile, online } = useGitHub();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
