@@ -34,27 +34,69 @@ export interface GitHubContent {
   encoding?: string;
 }
 
+/** Error types for structured error handling */
+export type GitHubErrorType = "network" | "auth" | "rate_limit" | "not_found" | "server" | "unknown";
+
+export class GitHubError extends Error {
+  type: GitHubErrorType;
+  status?: number;
+  constructor(message: string, type: GitHubErrorType, status?: number) {
+    super(message);
+    this.name = "GitHubError";
+    this.type = type;
+    this.status = status;
+  }
+}
+
+/** Detect if the browser is online */
+function useOnlineStatus() {
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => {
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+  return online;
+}
+
+/** Retry a function with exponential backoff */
+async function withRetry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      if (i === retries) throw err;
+      // Don't retry auth errors
+      if (err instanceof GitHubError && (err.type === "auth" || err.type === "not_found")) throw err;
+      await new Promise((r) => setTimeout(r, delay * Math.pow(2, i)));
+    }
+  }
+  throw new Error("Retry exhausted");
+}
+
 export function useGitHub() {
   const [connected, setConnected] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const online = useOnlineStatus();
   const sessionId = getSessionId();
 
   const checkStatus = useCallback(async () => {
+    if (!navigator.onLine) {
+      setLoading(false);
+      return;
+    }
     try {
-      const { data } = await supabase.functions.invoke("github-auth/status", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-        body: undefined,
-      });
-      // Use query params approach instead
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`,
         {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
+          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
         }
       );
       const statusData = await res.json();
@@ -69,13 +111,10 @@ export function useGitHub() {
 
   useEffect(() => {
     checkStatus();
-
-    // Check if returning from OAuth
     const params = new URLSearchParams(window.location.search);
     if (params.get("github_connected") === "true") {
       setConnected(true);
       setUsername(params.get("github_username"));
-      // Clean URL
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, [checkStatus]);
@@ -102,19 +141,39 @@ export function useGitHub() {
 
   const apiCall = useCallback(
     async (action: string, params: Record<string, unknown> = {}) => {
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/github-api`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({ session_id: sessionId, action, ...params }),
+      if (!navigator.onLine) {
+        throw new GitHubError("No internet connection. Please check your network.", "network");
+      }
+
+      return withRetry(async () => {
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/github-api`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            body: JSON.stringify({ session_id: sessionId, action, ...params }),
+          }
+        );
+
+        if (!res.ok) {
+          if (res.status === 401) throw new GitHubError("Authentication expired. Please reconnect GitHub.", "auth", 401);
+          if (res.status === 403) throw new GitHubError("API rate limit exceeded. Try again later.", "rate_limit", 403);
+          if (res.status === 404) throw new GitHubError("Resource not found.", "not_found", 404);
+          if (res.status >= 500) throw new GitHubError("Server error. Please try again.", "server", res.status);
+          throw new GitHubError(`Request failed (${res.status}).`, "unknown", res.status);
         }
-      );
-      return res.json();
+
+        const data = await res.json();
+        // GitHub API returns error objects
+        if (data?.message && data?.documentation_url) {
+          throw new GitHubError(data.message, "server");
+        }
+        return data;
+      });
     },
     [sessionId]
   );
@@ -167,10 +226,7 @@ export function useGitHub() {
     (owner: string, repo: string, branch?: string) =>
       apiCall("list_commits", { owner, repo, branch }) as Promise<Array<{
         sha: string;
-        commit: {
-          message: string;
-          author: { name: string; date: string };
-        };
+        commit: { message: string; author: { name: string; date: string } };
         author?: { login: string; avatar_url: string } | null;
       }>>,
     [apiCall]
@@ -188,6 +244,7 @@ export function useGitHub() {
     connected,
     username,
     loading,
+    online,
     connect,
     disconnect,
     listRepos,
