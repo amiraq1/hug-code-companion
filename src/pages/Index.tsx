@@ -1,4 +1,4 @@
-import { useState, useCallback, lazy, Suspense } from "react";
+import { useState, useCallback, useMemo, lazy, Suspense } from "react";
 import { FileExplorer } from "@/components/ide/FileExplorer";
 import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSwipe } from "@/hooks/useSwipe";
 import { LoginScreen } from "@/components/screens/LoginScreen";
 import { ReposScreen } from "@/components/screens/ReposScreen";
 import {
@@ -58,6 +59,18 @@ const Index = () => {
   const [editorSettings, setEditorSettings] = useState<EditorSettings>(DEFAULT_EDITOR_SETTINGS);
   const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
+  const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: () => setMobileTab(prev => {
+      const i = MOBILE_TABS.indexOf(prev);
+      return i < MOBILE_TABS.length - 1 ? MOBILE_TABS[i + 1] : prev;
+    }),
+    onSwipeRight: () => setMobileTab(prev => {
+      const i = MOBILE_TABS.indexOf(prev);
+      return i > 0 ? MOBILE_TABS[i - 1] : prev;
+    }),
+    threshold: 60,
+  });
   const { commitFile, online } = useGitHub();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -233,7 +246,7 @@ const Index = () => {
         </div>
 
         {/* Mobile Content */}
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0" {...swipeHandlers}>
           {mobileTab === "files" && (
             <div className="flex-1 overflow-y-auto">
               <FileExplorer
