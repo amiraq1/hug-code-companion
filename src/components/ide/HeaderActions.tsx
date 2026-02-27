@@ -1,0 +1,145 @@
+import {
+    Sparkles,
+    FolderGit2,
+    Settings,
+    PanelLeftClose,
+    PanelLeft,
+    Eye,
+    MessageSquare,
+    Github,
+    GitBranch,
+} from "lucide-react";
+
+interface HeaderActionsProps {
+    isMobile?: boolean;
+    onNavigate: (screen: "ai-planner" | "repos" | "settings") => void;
+    // Desktop specific props
+    sidebarVisible?: boolean;
+    onToggleSidebar?: () => void;
+    previewVisible?: boolean;
+    onTogglePreview?: () => void;
+    rightPanel?: "chat" | "github" | "git";
+    chatVisible?: boolean;
+    onToggleRightPanel?: (panel: "chat" | "github" | "git") => void;
+}
+
+export function HeaderActions({
+    isMobile = false,
+    onNavigate,
+    sidebarVisible,
+    onToggleSidebar,
+    previewVisible,
+    onTogglePreview,
+    rightPanel,
+    chatVisible,
+    onToggleRightPanel,
+}: HeaderActionsProps) {
+    if (isMobile) {
+        return (
+            <>
+                <button
+                    onClick={() => onNavigate("ai-planner")}
+                    className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+                >
+                    <Sparkles className="h-4 w-4" />
+                </button>
+                <button
+                    onClick={() => onNavigate("repos")}
+                    className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+                >
+                    <FolderGit2 className="h-4 w-4" />
+                </button>
+                <button
+                    onClick={() => onNavigate("settings")}
+                    className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+                >
+                    <Settings className="h-4 w-4" />
+                </button>
+            </>
+        );
+    }
+
+    // Desktop Actions
+    return (
+        <div className="flex items-center gap-0.5">
+            <button
+                onClick={() => onNavigate("ai-planner")}
+                className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+                title="AI Project Planner"
+            >
+                <Sparkles className="h-3.5 w-3.5" />
+            </button>
+            <button
+                onClick={() => onNavigate("repos")}
+                className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+                title="Repositories"
+            >
+                <FolderGit2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+                onClick={() => onNavigate("settings")}
+                className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+                title="Settings"
+            >
+                <Settings className="h-3.5 w-3.5" />
+            </button>
+
+            <div className="w-px h-4 bg-border mx-1" />
+
+            <button
+                onClick={onToggleSidebar}
+                className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+            >
+                {sidebarVisible ? (
+                    <PanelLeftClose className="h-3.5 w-3.5" />
+                ) : (
+                    <PanelLeft className="h-3.5 w-3.5" />
+                )}
+            </button>
+
+            <div className="w-px h-4 bg-border mx-1" />
+
+            <button
+                onClick={onTogglePreview}
+                className={`p-1.5 rounded-md transition-all duration-200 ${previewVisible
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    }`}
+                title="Preview"
+            >
+                <Eye className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+                onClick={() => onToggleRightPanel?.("chat")}
+                className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "chat" && chatVisible
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    }`}
+            >
+                <MessageSquare className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+                onClick={() => onToggleRightPanel?.("github")}
+                className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "github" && chatVisible
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    }`}
+            >
+                <Github className="h-3.5 w-3.5" />
+            </button>
+
+            <button
+                onClick={() => onToggleRightPanel?.("git")}
+                className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "git" && chatVisible
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    }`}
+                title="Git"
+            >
+                <GitBranch className="h-3.5 w-3.5" />
+            </button>
+        </div>
+    );
+}

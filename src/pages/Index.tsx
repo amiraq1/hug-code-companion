@@ -30,6 +30,7 @@ import {
   type EditorSettings,
 } from "@/components/screens/SettingsScreen";
 import { AIProjectPlanner } from "@/components/screens/AIProjectPlanner";
+import { HeaderActions } from "@/components/ide/HeaderActions";
 
 // Lazy load heavy components
 const CodeEditor = lazy(() => import("@/components/ide/CodeEditor").then(m => ({ default: m.CodeEditor })));
@@ -229,6 +230,15 @@ const Index = () => {
     if (!isMobile) setChatVisible(true);
   }, [isMobile]);
 
+  const handleToggleRightPanel = useCallback((panel: "chat" | "github" | "git") => {
+    if (rightPanel === panel && chatVisible) {
+      setChatVisible(false);
+    } else {
+      setRightPanel(panel);
+      setChatVisible(true);
+    }
+  }, [rightPanel, chatVisible]);
+
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
   // Screen Router
@@ -277,24 +287,7 @@ const Index = () => {
             </span>
           </div>
           <div className="flex-1" />
-          <button
-            onClick={() => setScreen("ai-planner")}
-            className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
-          >
-            <Sparkles className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setScreen("repos")}
-            className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
-          >
-            <FolderGit2 className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setScreen("settings")}
-            className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
+          <HeaderActions isMobile={true} onNavigate={setScreen} />
         </div>
 
         {/* Mobile Content */}
@@ -302,8 +295,8 @@ const Index = () => {
           <div
             key={mobileTab}
             className={`flex-1 flex flex-col min-h-0 ${slideDirection === "left" ? "animate-slide-from-right" :
-                slideDirection === "right" ? "animate-slide-from-left" :
-                  "animate-fade-in"
+              slideDirection === "right" ? "animate-slide-from-left" :
+                "animate-fade-in"
               }`}
           >
             {mobileTab === "files" && (
@@ -374,8 +367,8 @@ const Index = () => {
               key={id}
               onClick={() => switchToTab(id)}
               className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[3rem] ${mobileTab === id
-                  ? "text-primary"
-                  : "text-muted-foreground"
+                ? "text-primary"
+                : "text-muted-foreground"
                 }`}
             >
               <Icon className="h-5 w-5" />
@@ -402,93 +395,21 @@ const Index = () => {
       <div className="h-10 bg-ide-sidebar border-b border-border flex items-center px-4 gap-3 shrink-0">
         <div className="flex items-center gap-2">
           <img src="/app-icon.png" alt="" className="w-5 h-5 rounded" />
-          <span className="text-[13px] font-display font-semibold tracking-tight text-foreground">
-            Hug<span className="text-primary">Code</span>
+          <span className="text-[14px] font-display font-bold tracking-tight text-foreground">
+            Hug<span className="text-primary">Code</span> <span className="text-yellow-500">✨ بيئة التطوير</span>
           </span>
         </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => setScreen("ai-planner")}
-            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
-            title="AI Project Planner"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => setScreen("repos")}
-            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
-            title="Repositories"
-          >
-            <FolderGit2 className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => setScreen("settings")}
-            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
-            title="Settings"
-          >
-            <Settings className="h-3.5 w-3.5" />
-          </button>
-          <div className="w-px h-4 bg-border mx-1" />
-          <button
-            onClick={() => setSidebarVisible(!sidebarVisible)}
-            className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
-          >
-            {sidebarVisible ? (
-              <PanelLeftClose className="h-3.5 w-3.5" />
-            ) : (
-              <PanelLeft className="h-3.5 w-3.5" />
-            )}
-          </button>
-          <div className="w-px h-4 bg-border mx-1" />
-          <button
-            onClick={() => setPreviewVisible(!previewVisible)}
-            className={`p-1.5 rounded-md transition-all duration-200 ${previewVisible
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-              }`}
-            title="Preview"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => {
-              if (rightPanel === "chat" && chatVisible) setChatVisible(false);
-              else { setRightPanel("chat"); setChatVisible(true); }
-            }}
-            className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "chat" && chatVisible
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-              }`}
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => {
-              if (rightPanel === "github" && chatVisible) setChatVisible(false);
-              else { setRightPanel("github"); setChatVisible(true); }
-            }}
-            className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "github" && chatVisible
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-              }`}
-          >
-            <Github className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={() => {
-              if (rightPanel === "git" && chatVisible) setChatVisible(false);
-              else { setRightPanel("git"); setChatVisible(true); }
-            }}
-            className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "git" && chatVisible
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
-              }`}
-            title="Git"
-          >
-            <GitBranch className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        <HeaderActions
+          onNavigate={setScreen}
+          sidebarVisible={sidebarVisible}
+          onToggleSidebar={() => setSidebarVisible(!sidebarVisible)}
+          previewVisible={previewVisible}
+          onTogglePreview={() => setPreviewVisible(!previewVisible)}
+          rightPanel={rightPanel}
+          chatVisible={chatVisible}
+          onToggleRightPanel={handleToggleRightPanel}
+        />
       </div>
 
       {/* Main Content */}
