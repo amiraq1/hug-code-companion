@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, Bot, User, Sparkles, Loader2, Square, ClipboardPaste, Check } from "lucide-react";
+import { Send, Bot, User, Sparkles, Loader2, Square, ClipboardPaste, Check, FilePlus, Replace } from "lucide-react";
 import type { ChatMessage } from "@/stores/editorStore";
 import type { FileNode } from "@/stores/editorStore";
 import ReactMarkdown from "react-markdown";
@@ -17,38 +17,112 @@ interface AIChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (content: string) => void;
   onStreamMessage?: (id: string, content: string, done: boolean) => void;
-  onInsertCode?: (code: string) => void;
+  onInsertCode?: (code: string, replace?: boolean) => void;
   projectContext?: ProjectContext;
+  onCreateFile?: (path: string, content: string) => void;
 }
 
-function CodeBlockWithInsert({ code, className, onInsert }: { code: string; className?: string; onInsert?: (code: string) => void }) {
-  const [inserted, setInserted] = useState(false);
-  const handleInsert = () => {
+interface CodeBlockProps {
+  code: string;
+  className?: string;
+  meta?: string;
+  onInsert?: (code: string, replace?: boolean) => void;
+  onCreateFile?: (path: string, content: string) => void;
+}
+
+function CodeBlockWithInsert({ code, className, meta, onInsert, onCreateFile }: CodeBlockProps) {
+  const [status, setStatus] = useState<"idle" | "done">("idle");
+
+  const detectFilename = () => {
+    if (meta && meta.trim() !== "") return meta.trim();
+    const firstLine = code.split("\n")[0].trim();
+    if (firstLine.startsWith("//") && firstLine.includes("/")) {
+      return firstLine.replace("//", "").trim();
+    }
+    if (firstLine.startsWith("/*") && firstLine.includes("*/") && firstLine.includes("/")) {
+      return firstLine.replace("/*", "").replace("*/", "").trim();
+    }
+    return "src/NewModule.tsx";
+  };
+
+  const handleInsert = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (onInsert) {
-      onInsert(code);
-      setInserted(true);
+      onInsert(code, false);
+      setStatus("done");
       toast.success("تم إدراج الكود في المحرر");
-      setTimeout(() => setInserted(false), 2000);
+      setTimeout(() => setStatus("idle"), 2000);
     }
   };
+
+  const handleReplace = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onInsert && window.confirm("سيتم استبدال الكود الحالي في المحرر. هل أنت متأكد؟")) {
+      onInsert(code, true);
+      setStatus("done");
+      toast.success("تم استبدال كود الملف");
+      setTimeout(() => setStatus("idle"), 2000);
+    }
+  };
+
+  const handleCreate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onCreateFile) {
+      const defaultName = detectFilename();
+      const filename = window.prompt("مسار واسم الملف:", defaultName);
+      if (filename) {
+        onCreateFile(filename, code);
+        setStatus("done");
+        toast.success(`تم إنشاء/تحديث ${filename}`);
+        setTimeout(() => setStatus("idle"), 2000);
+      }
+    }
+  };
+
   return (
-    <div className="relative group">
-      <code className={className}>{code}</code>
-      {onInsert && (
-        <button
-          onClick={handleInsert}
-          className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1 px-2 py-1 rounded bg-primary/20 hover:bg-primary/30 text-primary text-[10px] font-mono border border-primary/20"
-          title="إدراج في المحرر"
-        >
-          {inserted ? <Check className="h-3 w-3" /> : <ClipboardPaste className="h-3 w-3" />}
-          {inserted ? "تم" : "إدراج"}
-        </button>
-      )}
+    <div className="relative group/block mt-2 mb-4">
+      <div className="absolute top-0 right-0 p-1 opacity-0 group-hover/block:opacity-100 transition-opacity duration-200 flex flex-col sm:flex-row items-end sm:items-center gap-1.5 z-10 m-1">
+        {onInsert && (
+          <>
+            <button
+              onClick={handleInsert}
+              className="flex items-center gap-1 px-2 py-1.5 rounded bg-ide-sidebar border border-border hover:bg-primary/20 hover:border-primary/50 text-muted-foreground hover:text-primary text-[10px] font-mono shadow-sm backdrop-blur transition-colors"
+              title="إدراج في موضع المؤشر"
+            >
+              {status === "done" ? <Check className="h-3.5 w-3.5" /> : <ClipboardPaste className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">إدراج</span>
+            </button>
+            <button
+              onClick={handleReplace}
+              className="flex items-center gap-1 px-2 py-1.5 rounded bg-ide-sidebar border border-border hover:bg-amber-500/20 hover:border-amber-500/50 text-muted-foreground hover:text-amber-500 text-[10px] font-mono shadow-sm backdrop-blur transition-colors"
+              title="استبدال الملف الحالي"
+            >
+              <Replace className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">استبدال</span>
+            </button>
+          </>
+        )}
+        {onCreateFile && (
+          <button
+            onClick={handleCreate}
+            className="flex items-center gap-1 px-2 py-1.5 rounded bg-primary text-primary-foreground hover:opacity-90 text-[10px] font-mono shadow-sm transition-opacity"
+            title="إنشاء ملف وتطبيقه"
+          >
+            <FilePlus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">إنشاء ملف</span>
+          </button>
+        )}
+      </div>
+      <div className="overflow-hidden rounded-md border border-border bg-[#0d0d0d]">
+        <code className={`block overflow-x-auto p-4 ${className || ""}`}>
+          {code}
+        </code>
+      </div>
     </div>
   );
 }
 
-export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsertCode, projectContext }: AIChatPanelProps) {
+export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsertCode, projectContext, onCreateFile }: AIChatPanelProps) {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -221,20 +295,26 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
                       pre({ children }) {
                         return <pre className="relative group">{children}</pre>;
                       },
-                      code({ className, children, ...props }) {
+                      code({ node, className, children, ...props }) {
                         const isBlock = className?.startsWith("language-");
                         const codeStr = String(children).replace(/\n$/, "");
                         if (!isBlock) {
                           return <code className={className} {...props}>{children}</code>;
                         }
+
+                        // Try to safely access meta string
+                        const metaString = (node?.data as any)?.meta || (node as any)?.meta || "";
+
                         return (
                           <CodeBlockWithInsert
                             code={codeStr}
                             className={className}
+                            meta={metaString}
                             onInsert={onInsertCode}
+                            onCreateFile={onCreateFile}
                           />
                         );
-                      },
+                      }
                     }}
                   >
                     {msg.content}

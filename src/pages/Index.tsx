@@ -168,13 +168,69 @@ const Index = () => {
     file_tree: files.map((f) => f.name).join(", "),
   }), [activeFile, openFilePaths, files]);
 
-  const handleInsertCode = useCallback((code: string) => {
+  const handleInsertCode = useCallback((code: string, replace = false) => {
     if (activeFile && activeFilePath) {
       const currentContent = activeFile.content || "";
-      const newContent = currentContent + "\n" + code;
+      const newContent = replace ? code : currentContent + "\n" + code;
       handleContentChange(activeFilePath, newContent);
     }
   }, [activeFile, activeFilePath, handleContentChange]);
+
+  const handleCreateFile = useCallback((path: string, content: string) => {
+    const updateTree = (nodes: FileNode[], parts: string[], currentPath: string): FileNode[] => {
+      if (parts.length === 1) {
+        const fileName = parts[0];
+        const existingNodeIdx = nodes.findIndex((n) => n.name === fileName && n.type === "file");
+        const ext = fileName.split(".").pop() || "txt";
+        let language = ext;
+        if (ext === "tsx" || ext === "ts") language = "typescript";
+        else if (ext === "js" || ext === "jsx") language = "javascript";
+        else if (ext === "md") language = "markdown";
+
+        const newNode: FileNode = {
+          name: fileName,
+          path, // The requested full path
+          type: "file",
+          language,
+          content,
+        };
+
+        if (existingNodeIdx >= 0) {
+          const newNodes = [...nodes];
+          newNodes[existingNodeIdx] = newNode;
+          return newNodes;
+        } else {
+          return [...nodes, newNode];
+        }
+      } else {
+        const folderName = parts[0];
+        const nextPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+        const existingFolderIdx = nodes.findIndex((n) => n.name === folderName && n.type === "folder");
+
+        if (existingFolderIdx >= 0) {
+          const newNodes = [...nodes];
+          newNodes[existingFolderIdx] = {
+            ...nodes[existingFolderIdx],
+            children: updateTree(nodes[existingFolderIdx].children || [], parts.slice(1), nextPath)
+          };
+          return newNodes;
+        } else {
+          const newFolder: FileNode = {
+            name: folderName,
+            path: nextPath,
+            type: "folder",
+            children: updateTree([], parts.slice(1), nextPath)
+          };
+          return [...nodes, newFolder];
+        }
+      }
+    };
+
+    setFiles((prev) => updateTree(prev, path.split("/").filter(Boolean), ""));
+    setActiveFilePath(path);
+    setOpenFilePaths((prev) => (prev.includes(path) ? prev : [...prev, path]));
+    if (isMobile) setMobileTab("editor");
+  }, [isMobile]);
 
   const handleGitHubFileOpen = useCallback(
     (path: string, content: string, language: string) => {
@@ -368,7 +424,14 @@ const Index = () => {
             {mobileTab === "chat" && (
               <div className="flex-1">
                 <Suspense fallback={<LazyFallback />}>
-                  <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} />
+                  <AIChatPanel
+                    messages={messages}
+                    onSendMessage={handleSendMessage}
+                    onStreamMessage={handleStreamMessage}
+                    onInsertCode={handleInsertCode}
+                    projectContext={projectContext}
+                    onCreateFile={handleCreateFile}
+                  />
                 </Suspense>
               </div>
             )}
@@ -482,7 +545,14 @@ const Index = () => {
           <div className="w-80 shrink-0 animate-slide-in-right h-full">
             <Suspense fallback={<LazyFallback />}>
               {rightPanel === "chat" ? (
-                <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} />
+                <AIChatPanel
+                  messages={messages}
+                  onSendMessage={handleSendMessage}
+                  onStreamMessage={handleStreamMessage}
+                  onInsertCode={handleInsertCode}
+                  projectContext={projectContext}
+                  onCreateFile={handleCreateFile}
+                />
               ) : rightPanel === "github" ? (
                 <GitHubPanel onFileOpen={handleGitHubFileOpen} />
               ) : (
