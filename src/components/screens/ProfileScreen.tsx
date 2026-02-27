@@ -167,8 +167,12 @@ export function ProfileScreen() {
                                 disabled={saveProfileMutation.isPending}
                                 className="px-4 py-2 bg-primary text-primary-foreground rounded-md font-medium flex items-center gap-2 hover:bg-primary/90 transition disabled:opacity-50"
                             >
-                                {saveProfileMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                Save Changes
+                                {saveProfileMutation.isPending ? (
+                                    <Loader2 key="loading" className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <Check key="check" className="w-4 h-4" />
+                                )}
+                                <span>Save Changes</span>
                             </button>
                         ) : (
                             <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md font-medium flex items-center gap-2 hover:bg-secondary/80 transition border border-border">
@@ -255,8 +259,8 @@ export function ProfileScreen() {
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
                                     className={`pb-3 text-sm font-medium capitalize whitespace-nowrap transition-colors relative ${activeTab === tab
-                                            ? "text-primary"
-                                            : "text-muted-foreground hover:text-foreground"
+                                        ? "text-primary"
+                                        : "text-muted-foreground hover:text-foreground"
                                         }`}
                                 >
                                     {tab}

@@ -89,7 +89,7 @@ function CodeBlockWithInsert({ code, className, meta, onInsert, onCreateFile }: 
               className="flex items-center gap-1 px-2 py-1.5 rounded bg-ide-sidebar border border-border hover:bg-primary/20 hover:border-primary/50 text-muted-foreground hover:text-primary text-[10px] font-mono shadow-sm backdrop-blur transition-colors"
               title="إدراج في موضع المؤشر"
             >
-              {status === "done" ? <Check className="h-3.5 w-3.5" /> : <ClipboardPaste className="h-3.5 w-3.5" />}
+              {status === "done" ? <Check key="check" className="h-3.5 w-3.5" /> : <ClipboardPaste key="paste" className="h-3.5 w-3.5" />}
               <span className="hidden sm:inline">إدراج</span>
             </button>
             <button
