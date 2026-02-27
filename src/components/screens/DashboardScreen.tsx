@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
     LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar, Legend
@@ -7,9 +7,10 @@ import {
     useReactTable, getCoreRowModel, getPaginationRowModel, flexRender, getSortedRowModel, SortingState
 } from "@tanstack/react-table";
 import {
-    Activity, Users, GitCommit, Sparkles, ArrowUpRight, ArrowDownRight,
     Terminal, Server, FileCode, CheckCircle2, XCircle, Search, Settings, MoreHorizontal
 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 // --- Mock Data ---
 const activityData = [
@@ -20,14 +21,6 @@ const activityData = [
     { name: "Fri", commits: 18, aiTokens: 4800, sessions: 35 },
     { name: "Sat", commits: 23, aiTokens: 3800, sessions: 40 },
     { name: "Sun", commits: 34, aiTokens: 4300, sessions: 38 },
-];
-
-const recentTasksData = [
-    { id: "T-01", project: "HugCode IDE", status: "completed", assignee: "@amiraq1", priority: "High", time: "10 mins ago" },
-    { id: "T-02", project: "Native Android", status: "in-progress", assignee: "@amiraq1", priority: "Critical", time: "1 hour ago" },
-    { id: "T-03", project: "Backend APIs", status: "failed", assignee: "System", priority: "Medium", time: "3 hours ago" },
-    { id: "T-04", project: "Admin Dashboard", status: "todo", assignee: "@amiraq1", priority: "High", time: "5 hours ago" },
-    { id: "T-05", project: "UI Metrics", status: "completed", assignee: "@amiraq1", priority: "Low", time: "1 day ago" },
 ];
 
 // --- Components ---
@@ -55,6 +48,57 @@ const StatCard = ({ title, value, icon: Icon, change, trend, primaryClass }: any
 export function DashboardScreen() {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [search, setSearch] = useState("");
+    const queryClient = useQueryClient();
+
+    // Fetch real AI tasks
+    const { data: realTasksData = [], isLoading } = useQuery({
+        queryKey: ["ai_tasks"],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from("ai_tasks")
+                .select(`
+                    id,
+                    title,
+                    status,
+                    priority,
+                    assignee,
+                    created_at,
+                    projects(name)
+                `)
+                .order("created_at", { ascending: false })
+                .limit(50);
+
+            if (error) throw error;
+
+            // Format data for the table
+            return data.map((task: any) => ({
+                id: task.id.split("-")[0].toUpperCase() || "T-00",
+                project: task.projects?.name || task.title,
+                status: task.status === "done" ? "completed" : task.status === "todo" ? "todo" : "in-progress",
+                assignee: task.assignee || "System",
+                priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+                time: new Date(task.created_at).toLocaleDateString(),
+            }));
+        },
+    });
+
+    // Realtime subscription
+    useEffect(() => {
+        const channel = supabase
+            .channel("ai_tasks_changes")
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "ai_tasks" },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ["ai_tasks"] });
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [queryClient]);
 
     const columns = useMemo(() => [
         {
@@ -74,9 +118,9 @@ export function DashboardScreen() {
                 const val = info.getValue();
                 return (
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${val === "completed" ? "bg-ide-success/10 text-ide-success border-ide-success/20" :
-                            val === "in-progress" ? "bg-ide-warning/10 text-ide-warning border-ide-warning/20" :
-                                val === "failed" ? "bg-destructive/10 text-destructive border-destructive/20" :
-                                    "bg-muted text-muted-foreground border-border"
+                        val === "in-progress" ? "bg-ide-warning/10 text-ide-warning border-ide-warning/20" :
+                            val === "failed" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                                "bg-muted text-muted-foreground border-border"
                         }`}>
                         {val === "completed" ? <CheckCircle2 className="w-3 h-3" /> : val === "failed" ? <XCircle className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
                         {val}
@@ -104,7 +148,7 @@ export function DashboardScreen() {
     ], []);
 
     const table = useReactTable({
-        data: recentTasksData,
+        data: realTasksData,
         columns,
         state: { sorting },
         onSortingChange: setSorting,
@@ -285,7 +329,7 @@ export function DashboardScreen() {
 
                     {/* Pagination Footer */}
                     <div className="p-4 border-t border-border bg-secondary/20 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Showing 1 to {recentTasksData.length} of 50 entries</span>
+                        <span>Showing 1 to {realTasksData.length} entries</span>
                         <div className="flex gap-2">
                             <button className="px-3 py-1 bg-card border border-border rounded hover:bg-secondary transition disabled:opacity-50" disabled>Previous</button>
                             <button className="px-3 py-1 bg-card border border-border rounded hover:bg-secondary transition">Next</button>
