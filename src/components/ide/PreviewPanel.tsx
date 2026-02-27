@@ -41,17 +41,16 @@ export function PreviewPanel({ file }: PreviewPanelProps) {
 
   return (
     <div
-      className={`flex flex-col bg-ide-editor border-l border-border ${
-        isFullscreen
-          ? "fixed inset-0 z-50"
-          : "h-full"
-      }`}
+      className={`flex flex-col bg-ide-editor/90 backdrop-blur-xl border-l border-border/80 shadow-2xl transition-all duration-300 ${isFullscreen
+        ? "fixed inset-0 z-50"
+        : "h-full"
+        }`}
     >
       {/* Toolbar */}
       <div className="h-9 shrink-0 flex items-center justify-between px-3 border-b border-border bg-ide-sidebar/50">
         <div className="flex items-center gap-1.5">
           <Eye className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[11px] font-mono text-muted-foreground tracking-wide uppercase">
+          <span className="text-[11px] font-mono font-bold text-foreground/80 tracking-widest uppercase">
             Preview
           </span>
           {file && (
@@ -112,10 +111,12 @@ export function PreviewPanel({ file }: PreviewPanelProps) {
       <div className="flex-1 relative overflow-auto bg-[#0d0d0d]">
         {!file ? (
           <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-2 animate-fade-in">
-              <Eye className="h-8 w-8 text-primary/10 mx-auto" />
+            <div className="text-center space-y-3 animate-pulse">
+              <div className="w-16 h-16 rounded-2xl bg-secondary/50 flex items-center justify-center mx-auto border border-border/50 shadow-xl">
+                <Eye className="h-8 w-8 text-primary/30" />
+              </div>
               <p className="text-[11px] text-muted-foreground/40 font-mono">
-                select a file to preview
+                Awaiting Output Signal
               </p>
             </div>
           </div>

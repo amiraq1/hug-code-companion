@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen } from "lucide-react";
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, FileJson, FileCode2, FileType, FileText, Image as ImageIcon } from "lucide-react";
 import type { FileNode } from "@/stores/editorStore";
 
 interface FileExplorerProps {
@@ -40,7 +40,7 @@ function FileTreeItem({
           ) : (
             <Folder className="h-3.5 w-3.5 text-primary/50 shrink-0" />
           )}
-          <span className="truncate text-sidebar-foreground font-medium">{node.name}</span>
+          <span className="truncate text-sidebar-foreground font-medium text-[13px]">{node.name}</span>
         </button>
         {expanded && node.children && (
           <div>
@@ -67,17 +67,43 @@ function FileTreeItem({
     return "text-muted-foreground";
   };
 
+  const getFileIcon = (name: string, colorClass: string) => {
+    const ext = name.split('.').pop()?.toLowerCase();
+    const props = { className: `h-4 w-4 shrink-0 ${colorClass}` };
+
+    switch (ext) {
+      case 'json': return <FileJson {...props} />;
+      case 'ts':
+      case 'tsx':
+      case 'js':
+      case 'jsx': return <FileCode2 {...props} />;
+      case 'css':
+      case 'scss': return <FileType {...props} />;
+      case 'md':
+      case 'txt': return <FileText {...props} />;
+      case 'png':
+      case 'jpg':
+      case 'jpeg':
+      case 'svg': return <ImageIcon {...props} />;
+      default: return <File {...props} />;
+    }
+  };
+
+  const fileColor = getFileColor(node.name);
+
   return (
     <button
       onClick={() => onFileSelect(node.path)}
-      className={`flex w-full items-center gap-1.5 px-2 py-[3px] text-[12px] transition-all duration-150 ${
-        isActive
-          ? "bg-primary/8 text-foreground border-r-2 border-r-primary"
-          : "hover:bg-secondary/40 text-sidebar-foreground"
-      }`}
+      className={`group flex w-full items-center gap-2 px-2 py-1.5 text-[13px] transition-all duration-200 relative ${isActive
+          ? "bg-primary/10 text-primary font-medium"
+          : "hover:bg-secondary/60 text-sidebar-foreground/80 hover:text-foreground"
+        }`}
       style={{ paddingLeft: `${depth * 14 + 22}px` }}
     >
-      <File className={`h-3.5 w-3.5 shrink-0 ${getFileColor(node.name)}`} />
+      {isActive && (
+        <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-r-full" />
+      )}
+      {getFileIcon(node.name, isActive ? 'text-primary' : fileColor)}
       <span className="truncate">{node.name}</span>
     </button>
   );
@@ -85,9 +111,11 @@ function FileTreeItem({
 
 export function FileExplorer({ files, activeFile, onFileSelect }: FileExplorerProps) {
   return (
-    <div className="h-full bg-ide-sidebar border-r border-border flex flex-col">
-      <div className="px-4 py-3 text-[10px] font-mono font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        Explorer
+    <div className="h-full bg-ide-sidebar/95 backdrop-blur-sm border-r border-border flex flex-col shadow-sm">
+      <div className="px-4 py-3 flex items-center justify-between">
+        <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-muted-foreground/80">
+          Explorer
+        </span>
       </div>
       <div className="flex-1 overflow-y-auto py-0.5">
         {files.map((node) => (
