@@ -7,7 +7,8 @@ import {
     useReactTable, getCoreRowModel, getPaginationRowModel, flexRender, getSortedRowModel, SortingState
 } from "@tanstack/react-table";
 import {
-    Terminal, Server, FileCode, CheckCircle2, XCircle, Search, Settings, MoreHorizontal
+    Terminal, Server, FileCode, CheckCircle2, XCircle, Search, Settings, MoreHorizontal,
+    GitCommit, Sparkles, ArrowUpRight, ArrowDownRight, Activity
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
