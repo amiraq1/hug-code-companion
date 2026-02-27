@@ -33,6 +33,10 @@ android {
     namespace = "app.lovable.b18996c477644e5c8e878b0ec5e83922"
     compileSdk = rootProject.ext.compileSdkVersion
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId "app.lovable.b18996c477644e5c8e878b0ec5e83922"
         minSdkVersion rootProject.ext.minSdkVersion

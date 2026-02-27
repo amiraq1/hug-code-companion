@@ -123,7 +123,7 @@ export function PreviewPanel({ file }: PreviewPanelProps) {
           <iframe
             ref={iframeRef}
             title="Live Preview"
-            sandbox="allow-scripts allow-same-origin"
+            sandbox="allow-scripts"
             className="w-full h-full border-0 bg-[#0d0d0d]"
             style={{
               transform: `scale(${zoom / 100})`,

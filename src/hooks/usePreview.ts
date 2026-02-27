@@ -52,6 +52,7 @@ export function usePreview() {
   const buildHTMLDocument = useCallback((file: FileNode): string => {
     const lang = file.language || "";
     const content = file.content || "";
+    const lowerName = file.name.toLowerCase();
 
     // Markdown preview
     if (lang === "markdown") {
@@ -102,12 +103,28 @@ export function usePreview() {
       );
     }
 
-    // TypeScript/JavaScript – execute
-    if (lang === "typescript" || lang === "javascript") {
+    // JavaScript preview – execute
+    if (lang === "javascript") {
       return wrapInDocument(
         `<div id="output" class="js-output"></div>`,
         getJsStyles(),
         buildJsRunner(content)
+      );
+    }
+
+    // TypeScript/TSX preview – display source to avoid runtime syntax errors
+    if (
+      lang === "typescript" ||
+      lowerName.endsWith(".ts") ||
+      lowerName.endsWith(".tsx")
+    ) {
+      return wrapInDocument(
+        `<div class="ts-hint">
+          <strong>TypeScript preview note:</strong> direct execution is disabled.
+          Use build/runtime toolchain (Vite) for TS/TSX files.
+        </div>
+        <pre class="source-view"><code>${escapeHtml(content)}</code></pre>`,
+        getTypeScriptStyles()
       );
     }
 
@@ -128,12 +145,7 @@ export function usePreview() {
       lastInjectedRef.current = html;
 
       const iframe = iframeRef.current;
-      const doc = iframe.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(html);
-        doc.close();
-      }
+      iframe.srcdoc = html;
     },
     [buildHTMLDocument]
   );
@@ -269,6 +281,8 @@ ${js ? `<script type="module">${js}</script>` : ""}
 }
 
 function buildJsRunner(code: string): string {
+  const safeCode = escapeClosingScriptTag(code);
+
   // Redirect console.log to DOM, allow top-level imports
   return `
   const out = document.getElementById("output");
@@ -298,8 +312,12 @@ function buildJsRunner(code: string): string {
   });
 
   // User Code:
-  ${code}
+  ${safeCode}
   `;
+}
+
+function escapeClosingScriptTag(code: string): string {
+  return code.replace(/<\/script/gi, "<\\/script");
 }
 
 function getMarkdownStyles(): string {
@@ -343,6 +361,22 @@ function getJsStyles(): string {
 
 function getSourceStyles(): string {
   return `
+.source-view{background:#111;padding:20px;border-radius:8px;border:1px solid #222;overflow-x:auto}
+.source-view code{color:#a0a0a0;font-size:13px}
+`;
+}
+
+function getTypeScriptStyles(): string {
+  return `
+.ts-hint{
+  background:#1b2a38;
+  color:#9cc8ec;
+  border:1px solid #2f4f68;
+  border-radius:8px;
+  padding:12px 14px;
+  margin-bottom:12px;
+  font-size:12px;
+}
 .source-view{background:#111;padding:20px;border-radius:8px;border:1px solid #222;overflow-x:auto}
 .source-view code{color:#a0a0a0;font-size:13px}
 `;

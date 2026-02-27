@@ -1,9 +1,5 @@
 {
   "appId": "app.lovable.b18996c477644e5c8e878b0ec5e83922",
   "appName": "hug-code-companion",
-  "webDir": "dist",
-  "server": {
-    "url": "https://b18996c4-7764-4e5c-8e87-8b0ec5e83922.lovableproject.com?forceHideBadge=true",
-    "cleartext": true
-  }
+  "webDir": "dist"
 }
