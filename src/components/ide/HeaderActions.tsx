@@ -8,11 +8,12 @@ import {
     MessageSquare,
     Github,
     GitBranch,
+    Activity,
 } from "lucide-react";
 
 interface HeaderActionsProps {
     isMobile?: boolean;
-    onNavigate: (screen: "ai-planner" | "repos" | "settings") => void;
+    onNavigate: (screen: "ai-planner" | "repos" | "settings" | "dashboard") => void;
     // Desktop specific props
     sidebarVisible?: boolean;
     onToggleSidebar?: () => void;
@@ -55,6 +56,12 @@ export function HeaderActions({
                 >
                     <Settings className="h-4 w-4" />
                 </button>
+                <button
+                    onClick={() => onNavigate("dashboard")}
+                    className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+                >
+                    <Activity className="h-4 w-4" />
+                </button>
             </>
         );
     }
@@ -83,6 +90,13 @@ export function HeaderActions({
             >
                 <Settings className="h-3.5 w-3.5" />
             </button>
+            <button
+                onClick={() => onNavigate("dashboard")}
+                className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+                title="Dashboard"
+            >
+                <Activity className="h-3.5 w-3.5" />
+            </button>
 
             <div className="w-px h-4 bg-border mx-1" />
 
@@ -102,8 +116,8 @@ export function HeaderActions({
             <button
                 onClick={onTogglePreview}
                 className={`p-1.5 rounded-md transition-all duration-200 ${previewVisible
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                     }`}
                 title="Preview"
             >
@@ -113,8 +127,8 @@ export function HeaderActions({
             <button
                 onClick={() => onToggleRightPanel?.("chat")}
                 className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "chat" && chatVisible
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                     }`}
             >
                 <MessageSquare className="h-3.5 w-3.5" />
@@ -123,8 +137,8 @@ export function HeaderActions({
             <button
                 onClick={() => onToggleRightPanel?.("github")}
                 className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "github" && chatVisible
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                     }`}
             >
                 <Github className="h-3.5 w-3.5" />
@@ -133,8 +147,8 @@ export function HeaderActions({
             <button
                 onClick={() => onToggleRightPanel?.("git")}
                 className={`p-1.5 rounded-md transition-all duration-200 ${rightPanel === "git" && chatVisible
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                     }`}
                 title="Git"
             >
