@@ -31,6 +31,7 @@ import {
 } from "@/components/screens/SettingsScreen";
 import { AIProjectPlanner } from "@/components/screens/AIProjectPlanner";
 import { DashboardScreen } from "@/components/screens/DashboardScreen";
+import { ProfileScreen } from "@/components/screens/ProfileScreen";
 import { HeaderActions } from "@/components/ide/HeaderActions";
 
 // Lazy load heavy components
@@ -46,7 +47,7 @@ const LazyFallback = () => (
   </div>
 );
 
-type AppScreen = "login" | "repos" | "editor" | "settings" | "ai-planner" | "dashboard";
+type AppScreen = "login" | "repos" | "editor" | "settings" | "ai-planner" | "dashboard" | "profile";
 type MobileTab = "files" | "editor" | "preview" | "chat" | "git";
 const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
 
@@ -257,6 +258,19 @@ const Index = () => {
           </button>
         </div>
         <DashboardScreen />
+      </div>
+    );
+  }
+
+  if (screen === "profile") {
+    return (
+      <div className="h-screen flex flex-col pt-safe bg-background">
+        <div className="bg-card border-b border-border p-2">
+          <button onClick={() => setScreen("editor")} className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1 px-3">
+            ← العودة للمحرر
+          </button>
+        </div>
+        <ProfileScreen />
       </div>
     );
   }

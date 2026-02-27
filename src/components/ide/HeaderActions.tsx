@@ -9,11 +9,12 @@ import {
     Github,
     GitBranch,
     Activity,
+    User,
 } from "lucide-react";
 
 interface HeaderActionsProps {
     isMobile?: boolean;
-    onNavigate: (screen: "ai-planner" | "repos" | "settings" | "dashboard") => void;
+    onNavigate: (screen: "ai-planner" | "repos" | "settings" | "dashboard" | "profile") => void;
     // Desktop specific props
     sidebarVisible?: boolean;
     onToggleSidebar?: () => void;
@@ -62,6 +63,12 @@ export function HeaderActions({
                 >
                     <Activity className="h-4 w-4" />
                 </button>
+                <button
+                    onClick={() => onNavigate("profile")}
+                    className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
+                >
+                    <User className="h-4 w-4" />
+                </button>
             </>
         );
     }
@@ -96,6 +103,13 @@ export function HeaderActions({
                 title="Dashboard"
             >
                 <Activity className="h-3.5 w-3.5" />
+            </button>
+            <button
+                onClick={() => onNavigate("profile")}
+                className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
+                title="User Profile"
+            >
+                <User className="h-3.5 w-3.5" />
             </button>
 
             <div className="w-px h-4 bg-border mx-1" />
