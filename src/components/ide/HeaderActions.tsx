@@ -11,6 +11,7 @@ import {
     Activity,
     User,
 } from "lucide-react";
+import { NotificationHub } from "./NotificationHub";
 
 interface HeaderActionsProps {
     isMobile?: boolean;
@@ -63,6 +64,7 @@ export function HeaderActions({
                 >
                     <Activity className="h-4 w-4" />
                 </button>
+                <NotificationHub />
                 <button
                     onClick={() => onNavigate("profile")}
                     className="p-2 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
@@ -104,6 +106,7 @@ export function HeaderActions({
             >
                 <Activity className="h-3.5 w-3.5" />
             </button>
+            <NotificationHub />
             <button
                 onClick={() => onNavigate("profile")}
                 className="p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
