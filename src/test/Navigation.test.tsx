@@ -46,13 +46,13 @@ import Index from "@/pages/Index";
 describe("App Navigation", () => {
   it("starts on login screen", () => {
     render(<Index />);
-    expect(screen.getByText("Welcome")).toBeInTheDocument();
-    expect(screen.getByText("Sign in with GitHub")).toBeInTheDocument();
+    expect(screen.getByText("مرحباً")).toBeInTheDocument();
+    expect(screen.getByText("تسجيل الدخول عبر GitHub")).toBeInTheDocument();
   });
 
   it("navigates to editor when Continue without GitHub is clicked", () => {
     render(<Index />);
-    fireEvent.click(screen.getByText("Continue without GitHub"));
+    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     // Should see editor elements
     expect(screen.getByText("Explorer")).toBeInTheDocument();
   });
@@ -60,7 +60,7 @@ describe("App Navigation", () => {
   it("shows settings screen when settings is clicked from editor", () => {
     render(<Index />);
     // Go to editor first
-    fireEvent.click(screen.getByText("Continue without GitHub"));
+    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     // Click settings
     fireEvent.click(screen.getByTitle("Settings"));
     expect(screen.getByText("Settings")).toBeInTheDocument();
@@ -69,7 +69,7 @@ describe("App Navigation", () => {
 
   it("returns to editor from settings", () => {
     render(<Index />);
-    fireEvent.click(screen.getByText("Continue without GitHub"));
+    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     fireEvent.click(screen.getByTitle("Settings"));
     // Click back
     const buttons = screen.getAllByRole("button");
@@ -79,14 +79,14 @@ describe("App Navigation", () => {
 
   it("navigates to repos screen from editor", () => {
     render(<Index />);
-    fireEvent.click(screen.getByText("Continue without GitHub"));
+    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     fireEvent.click(screen.getByTitle("Repositories"));
     expect(screen.getByText("/ repositories")).toBeInTheDocument();
   });
 
   it("toggles sidebar visibility", () => {
     render(<Index />);
-    fireEvent.click(screen.getByText("Continue without GitHub"));
+    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     // Explorer should be visible
     expect(screen.getByText("Explorer")).toBeInTheDocument();
     // Find and click the PanelLeftClose button (first icon button after branding)
@@ -101,7 +101,7 @@ describe("App Navigation", () => {
 describe("Editor Features", () => {
   beforeEach(() => {
     render(<Index />);
-    fireEvent.click(screen.getByText("Continue without GitHub"));
+    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
   });
 
   it("shows file tree with default files", () => {
@@ -124,6 +124,6 @@ describe("Editor Features", () => {
   });
 
   it("shows title bar branding", () => {
-    expect(screen.getByText("agent")).toBeInTheDocument();
+    expect(screen.getByText("Hug")).toBeInTheDocument();
   });
 });

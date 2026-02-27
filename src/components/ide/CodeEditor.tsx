@@ -1,4 +1,6 @@
+import { memo, useMemo, useCallback } from "react";
 import Editor from "@monaco-editor/react";
+import { Loader2 } from "lucide-react";
 import type { FileNode } from "@/stores/editorStore";
 import type { EditorSettings } from "@/components/screens/SettingsScreen";
 
@@ -23,7 +25,43 @@ function getMonacoLanguage(lang?: string): string {
   }
 }
 
-export function CodeEditor({ file, onContentChange, settings }: CodeEditorProps) {
+export const CodeEditor = memo(function CodeEditor({ file, onContentChange, settings }: CodeEditorProps) {
+  const handleContentChange = useCallback((value?: string) => {
+    if (file?.path) {
+      onContentChange(file.path, value || "");
+    }
+  }, [file?.path, onContentChange]);
+
+  const editorOptions = useMemo(() => ({
+    fontSize: settings?.fontSize ?? 13,
+    fontFamily: "'IBM Plex Mono', monospace",
+    fontLigatures: true,
+    minimap: { enabled: settings?.minimap ?? true, scale: 1, renderCharacters: false },
+    padding: { top: 16, bottom: 16 },
+    scrollBeyondLastLine: false,
+    smoothScrolling: true,
+    cursorBlinking: "smooth" as const,
+    cursorSmoothCaretAnimation: "on" as const,
+    renderLineHighlight: "gutter" as const,
+    bracketPairColorization: { enabled: settings?.bracketPairs ?? true },
+    lineNumbers: (settings?.lineNumbers ?? true) ? "on" as const : "off" as const,
+    wordWrap: (settings?.wordWrap ?? true) ? "on" as const : "off" as const,
+    tabSize: settings?.tabSize ?? 2,
+    lineHeight: 1.7,
+    letterSpacing: 0.3,
+    guides: {
+      indentation: true,
+      bracketPairs: true,
+    },
+  }), [
+    settings?.fontSize,
+    settings?.minimap,
+    settings?.bracketPairs,
+    settings?.lineNumbers,
+    settings?.wordWrap,
+    settings?.tabSize
+  ]);
+
   if (!file) {
     return (
       <div className="flex-1 flex items-center justify-center bg-ide-editor">
@@ -41,31 +79,16 @@ export function CodeEditor({ file, onContentChange, settings }: CodeEditorProps)
         height="100%"
         language={getMonacoLanguage(file.language)}
         value={file.content || ""}
-        onChange={(value) => onContentChange(file.path, value || "")}
+        onChange={handleContentChange}
         theme="vs-dark"
-        options={{
-          fontSize: settings?.fontSize ?? 13,
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontLigatures: true,
-          minimap: { enabled: settings?.minimap ?? true, scale: 1, renderCharacters: false },
-          padding: { top: 16, bottom: 16 },
-          scrollBeyondLastLine: false,
-          smoothScrolling: true,
-          cursorBlinking: "smooth",
-          cursorSmoothCaretAnimation: "on",
-          renderLineHighlight: "gutter",
-          bracketPairColorization: { enabled: settings?.bracketPairs ?? true },
-          lineNumbers: (settings?.lineNumbers ?? true) ? "on" : "off",
-          wordWrap: (settings?.wordWrap ?? true) ? "on" : "off",
-          tabSize: settings?.tabSize ?? 2,
-          lineHeight: 1.7,
-          letterSpacing: 0.3,
-          guides: {
-            indentation: true,
-            bracketPairs: true,
-          },
-        }}
+        options={editorOptions}
+        loading={
+          <div className="flex h-full items-center justify-center text-muted-foreground/50">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="ml-2 text-xs font-mono">Loading IDE...</span>
+          </div>
+        }
       />
     </div>
   );
-}
+});
