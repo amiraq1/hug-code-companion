@@ -26,6 +26,22 @@ vi.mock("@/hooks/useGitHub", () => ({
   GitHubError: class extends Error { type: string; constructor(m: string, t: string) { super(m); this.type = t; } },
 }));
 
+vi.mock("@/stores/authStore", () => ({
+  useAuthStore: () => ({
+    status: "unauthenticated",
+    username: null,
+    error: null,
+    sessionId: "test-session",
+    isAuthenticated: false,
+    isLoading: false,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    clearError: vi.fn(),
+    retry: vi.fn(),
+    checkStatus: vi.fn(),
+  }),
+}));
+
 vi.mock("@monaco-editor/react", () => ({
   default: ({ value }: { value: string }) => (
     <div data-testid="monaco-editor">{value?.slice(0, 50)}</div>
@@ -38,6 +54,18 @@ vi.mock("@/components/ide/PreviewPanel", () => ({
 
 vi.mock("@/components/ide/GitPanel", () => ({
   GitPanel: () => <div data-testid="git-panel">Git</div>,
+}));
+
+vi.mock("@/components/ide/NotificationHub", () => ({
+  NotificationHub: () => null,
+}));
+
+vi.mock("@/lib/asyncStorage", () => ({
+  AsyncStorage: {
+    getItem: vi.fn().mockResolvedValue(null),
+    setItem: vi.fn().mockResolvedValue(undefined),
+    removeItem: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 // Import after mocks

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { useMotionValue, useTransform, animate, type MotionValue } from "framer-motion";
 
 export type SwipeDirection = "left" | "right" | null;
@@ -17,7 +17,7 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 60, resistance
   const x = useMotionValue(0);
 
   // Framer Motion Spring config matching iOS
-  const springOptions = { damping: 20, stiffness: 200, mass: 0.8 };
+  const springOptions = useMemo(() => ({ damping: 20, stiffness: 200, mass: 0.8 }), []);
 
   const onTouchStart = useCallback((e: React.TouchEvent | TouchEvent | MouseEvent) => {
     let clientX = 0;

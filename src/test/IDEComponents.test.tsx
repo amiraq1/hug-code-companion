@@ -40,7 +40,7 @@ describe("FileExplorer", () => {
   it("highlights active file", () => {
     render(<FileExplorer {...defaultProps} activeFile="package.json" />);
     const button = screen.getByText("package.json").closest("button");
-    expect(button?.className).toContain("border-r-primary");
+    expect(button?.className).toContain("border-l-primary");
   });
 });
 

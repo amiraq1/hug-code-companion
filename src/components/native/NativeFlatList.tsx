@@ -27,14 +27,22 @@ function NativeFlatListInner<T>({
     const [containerHeight, setContainerHeight] = useState(0);
 
     useEffect(() => {
-        if (!containerRef.current) return;
+        const container = containerRef.current;
+        if (!container) return;
+
+        // Initial height
+        setContainerHeight(container.clientHeight);
+
+        if (typeof ResizeObserver === "undefined") {
+            const handleResize = () => setContainerHeight(container.clientHeight);
+            window.addEventListener("resize", handleResize);
+            return () => window.removeEventListener("resize", handleResize);
+        }
+
         const observer = new ResizeObserver((entries) => {
             setContainerHeight(entries[0].contentRect.height);
         });
-        observer.observe(containerRef.current);
-
-        // Initial height
-        setContainerHeight(containerRef.current.clientHeight);
+        observer.observe(container);
 
         return () => observer.disconnect();
     }, []);

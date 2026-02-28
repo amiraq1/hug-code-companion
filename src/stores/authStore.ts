@@ -7,7 +7,6 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -124,6 +123,16 @@ function clearCachedAuth(): void {
   removeSecureItem(AUTH_CACHE_KEY);
 }
 
+function createTimeoutSignal(timeoutMs: number): AbortSignal {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    return AbortSignal.timeout(timeoutMs);
+  }
+
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(), timeoutMs);
+  return controller.signal;
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────
 
 export function useAuthStore() {
@@ -169,7 +178,7 @@ export function useAuthStore() {
         `https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`,
         {
           headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-          signal: AbortSignal.timeout(10000),
+          signal: createTimeoutSignal(10000),
         }
       );
 

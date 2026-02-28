@@ -17,10 +17,35 @@ Object.defineProperty(window, "matchMedia", {
 // Mock scrollIntoView for jsdom
 Element.prototype.scrollIntoView = () => {};
 
+// Mock ResizeObserver for jsdom
+if (!("ResizeObserver" in globalThis)) {
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    value: ResizeObserverMock,
+    writable: true,
+  });
+}
+
 // Mock crypto.randomUUID
 if (!crypto.randomUUID) {
   Object.defineProperty(crypto, "randomUUID", {
     value: () => "test-session-uuid-1234",
+  });
+}
+
+// Polyfill AbortSignal.timeout for environments that don't support it
+if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "function") {
+  Object.defineProperty(AbortSignal, "timeout", {
+    value: (ms: number) => {
+      const controller = new AbortController();
+      setTimeout(() => controller.abort(), ms);
+      return controller.signal;
+    },
+    writable: true,
   });
 }
 
