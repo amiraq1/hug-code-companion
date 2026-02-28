@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, lazy, Suspense } from "react";
+import { useState, useCallback, useMemo, lazy, Suspense, useEffect, useTransition, startTransition } from "react";
 import { FileExplorer } from "@/components/ide/FileExplorer";
 import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
@@ -51,12 +51,47 @@ type AppScreen = "login" | "repos" | "editor" | "settings" | "ai-planner" | "das
 type MobileTab = "files" | "editor" | "preview" | "chat" | "git";
 const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
 
+import { MobileStack } from "@/components/native/MobileStack";
+import { AsyncStorage } from "@/lib/asyncStorage";
+import { motion } from "framer-motion";
+
 const Index = () => {
   const isMobile = useIsMobile();
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isPending, startFileTransition] = useTransition();
   const [screen, setScreen] = useState<AppScreen>("login");
   const [files, setFiles] = useState<FileNode[]>(DEFAULT_FILES);
   const [activeFilePath, setActiveFilePath] = useState<string | null>("src/App.tsx");
   const [openFilePaths, setOpenFilePaths] = useState<string[]>(["src/App.tsx"]);
+
+  // Elite Offline Support Initialization
+  useEffect(() => {
+    const loadState = async () => {
+      try {
+        const savedFiles = await AsyncStorage.getItem<FileNode[]>("files_state");
+        if (savedFiles) setFiles(savedFiles);
+        const savedActive = await AsyncStorage.getItem<string>("active_file");
+        if (savedActive) setActiveFilePath(savedActive);
+        const savedTabs = await AsyncStorage.getItem<string[]>("open_tabs");
+        if (savedTabs) setOpenFilePaths(savedTabs);
+      } catch (err) {
+        console.warn("Elite M-Store loading error:", err);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadState();
+  }, []);
+
+  // Elite Offline Support Syncing Layer
+  useEffect(() => {
+    if (isLoaded) {
+      AsyncStorage.setItem("files_state", files).catch(() => { });
+      AsyncStorage.setItem("active_file", activeFilePath).catch(() => { });
+      AsyncStorage.setItem("open_tabs", openFilePaths).catch(() => { });
+    }
+  }, [files, activeFilePath, openFilePaths, isLoaded]);
+
   const [chatVisible, setChatVisible] = useState(!isMobile);
   const [sidebarVisible, setSidebarVisible] = useState(!isMobile);
   const [rightPanel, setRightPanel] = useState<"chat" | "github" | "git">("chat");
@@ -91,7 +126,7 @@ const Index = () => {
     });
   }, []);
 
-  const { onTouchStart, onTouchEnd } = useSwipe({
+  const { onTouchStart, onTouchMove, onTouchEnd, x } = useSwipe({
     onSwipeLeft: () => navigateTab("left"),
     onSwipeRight: () => navigateTab("right"),
     threshold: 60,
@@ -113,10 +148,17 @@ const Index = () => {
     .map((p) => allFiles.find((f) => f.path === p))
     .filter(Boolean) as FileNode[];
 
+  // Elite Concurrent Path Render
   const handleFileSelect = useCallback((path: string) => {
-    setActiveFilePath(path);
     setOpenFilePaths((prev) => (prev.includes(path) ? prev : [...prev, path]));
     if (isMobile) setMobileTab("editor");
+
+    // Yield the main thread via startTransition
+    // Monaco Editor is incredibly heavy; mounting an entirely new editor
+    // block JS Thread. We tell React this update is non-urgent to keep UI silky smooth limit drops in UI framepacing.
+    startFileTransition(() => {
+      setActiveFilePath(path);
+    });
   }, [isMobile]);
 
   const handleTabClose = useCallback(
@@ -255,10 +297,12 @@ const Index = () => {
         }
         return [...prev, newFile];
       });
-      setActiveFilePath(path);
-      setOpenFilePaths((prevPaths) =>
-        prevPaths.includes(path) ? prevPaths : [...prevPaths, path]
-      );
+      startFileTransition(() => {
+        setActiveFilePath(path);
+        setOpenFilePaths((prevPaths) =>
+          prevPaths.includes(path) ? prevPaths : [...prevPaths, path]
+        );
+      });
       if (isMobile) setMobileTab("editor");
     },
     [isMobile]
@@ -299,7 +343,173 @@ const Index = () => {
 
   const lineCount = activeFile?.content?.split("\n").length || 0;
 
-  // Screen Router
+  // Mobile routing uses Elite Native Stack
+  if (isMobile) {
+    const mobileScreens = {
+      login: <LoginScreen onContinue={() => setScreen("editor")} />,
+      repos: <ReposScreen onSelectRepo={handleSelectRepo} onBack={() => setScreen("editor")} />,
+      settings: <SettingsScreen onBack={() => setScreen("editor")} editorSettings={editorSettings} onSettingsChange={setEditorSettings} />,
+      'ai-planner': <AIProjectPlanner onBack={() => setScreen("editor")} sessionId={localStorage.getItem("hugcode_session") || "default"} />,
+      editor: (
+        <div className="h-[100dvh] flex flex-col overflow-hidden bg-background grain-overlay relative">
+          {/* Mobile Header - Glassmorphism & Minimalist */}
+          <div className="h-14 bg-background/70 backdrop-blur-2xl border-b border-white/5 flex items-center px-4 gap-3 shrink-0 z-40 transition-all">
+            <div className="flex items-center gap-2">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-0 bg-primary/20 blur-md rounded-full" />
+                <img src="/app-icon.png" alt="" className="w-6 h-6 rounded relative z-10" />
+              </div>
+              <span className="text-sm font-display font-semibold tracking-wide text-foreground/90">
+                Hug<span className="text-primary drop-shadow-[0_0_8px_rgba(255,180,0,0.5)]">Code</span>
+              </span>
+            </div>
+            <div className="flex-1" />
+            <div className="flex items-center gap-1.5 bg-white/[0.03] rounded-full p-1 border border-white/5 shadow-inner">
+              <button
+                onClick={() => setScreen("ai-planner")}
+                className="p-2 rounded-full hover:bg-primary/20 hover:text-primary transition-all duration-300 text-muted-foreground"
+              >
+                <Sparkles className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setScreen("repos")}
+                className="p-2 rounded-full hover:bg-white/10 hover:text-foreground transition-all duration-300 text-muted-foreground"
+              >
+                <FolderGit2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setScreen("settings")}
+                className="p-2 rounded-full hover:bg-white/10 hover:text-foreground transition-all duration-300 text-muted-foreground"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile Content (Padded at bottom for floating dock) */}
+          <div className="flex-1 flex flex-col min-h-0 pb-[88px]" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} style={{ touchAction: 'pan-y', overflowX: 'hidden' }}>
+            <motion.div
+              key={mobileTab}
+              style={{ x }}
+              className={`flex-1 flex flex-col min-h-0 h-full w-full ${slideDirection === "left" ? "animate-slide-from-right" :
+                slideDirection === "right" ? "animate-slide-from-left" :
+                  "animate-fade-in"
+                }`}
+            >
+              {mobileTab === "files" && (
+                <div className="flex-1 overflow-y-auto">
+                  <FileExplorer
+                    files={files}
+                    activeFile={activeFilePath}
+                    onFileSelect={handleFileSelect}
+                  />
+                </div>
+              )}
+
+              {mobileTab === "editor" && (
+                <div className="flex-1 flex flex-col min-h-0 bg-ide-editor/50 backdrop-blur-sm rounded-xl mx-2 mt-2 mb-0 overflow-hidden border border-white/5 shadow-2xl">
+                  <TabBar
+                    openFiles={openFiles}
+                    activeFile={activeFilePath}
+                    onTabSelect={setActiveFilePath}
+                    onTabClose={handleTabClose}
+                    onCommitFile={setCommitDialogPath}
+                  />
+                  <div className="flex-1 relative">
+                    <Suspense fallback={<LazyFallback />}>
+                      {isPending ? (
+                        <LazyFallback />
+                      ) : (
+                        <CodeEditor
+                          file={activeFile}
+                          onContentChange={handleContentChange}
+                          settings={editorSettings}
+                        />
+                      )}
+                    </Suspense>
+                  </div>
+                </div>
+              )}
+
+              {mobileTab === "preview" && (
+                <div className="flex-1 p-2 flex flex-col">
+                  <Suspense fallback={<LazyFallback />}>
+                    <div className="flex-1 rounded-xl overflow-hidden border border-white/5 shadow-2xl bg-ide-editor/50 backdrop-blur-sm">
+                      <PreviewPanel file={activeFile} />
+                    </div>
+                  </Suspense>
+                </div>
+              )}
+
+              {mobileTab === "chat" && (
+                <div className="flex-1 flex flex-col min-h-0 bg-ide-editor/50 backdrop-blur-sm rounded-xl mx-2 mt-2 border border-white/5 shadow-2xl overflow-hidden">
+                  <Suspense fallback={<LazyFallback />}>
+                    <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} />
+                  </Suspense>
+                </div>
+              )}
+
+              {mobileTab === "git" && (
+                <div className="flex-1 overflow-y-auto p-2">
+                  <Suspense fallback={<LazyFallback />}>
+                    <div className="flex-1 rounded-xl overflow-hidden border border-white/5 shadow-2xl bg-ide-editor/50 backdrop-blur-sm">
+                      <GitPanel />
+                    </div>
+                  </Suspense>
+                </div>
+              )}
+            </motion.div>
+          </div >
+
+          {/* Floating Dock Navigation - Avant-Garde Edge */}
+          < div className="absolute bottom-6 left-4 right-4 h-16 bg-background/80 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.8)] flex items-center justify-around px-2 z-50 safe-area-bottom" >
+            {([
+              { id: "files" as MobileTab, icon: FolderTree, label: "Files" },
+              { id: "editor" as MobileTab, icon: Code2, label: "Code" },
+              { id: "preview" as MobileTab, icon: Eye, label: "Preview" },
+              { id: "chat" as MobileTab, icon: MessageSquare, label: "AI" },
+              { id: "git" as MobileTab, icon: GitBranch, label: "Git" },
+            ]).map(({ id, icon: Icon, label }) => {
+              const isActive = mobileTab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => switchToTab(id)}
+                  className={`relative flex flex-col items-center justify-center w-14 h-12 rounded-xl transition-all duration-500 ease-out group ${isActive
+                    ? "bg-primary/10 text-primary shadow-inner scale-105"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                    }`}
+                >
+                  {isActive && (
+                    <div className="absolute inset-0 bg-primary/20 blur-md rounded-xl" />
+                  )}
+                  <Icon className={`h-[22px] w-[22px] transition-transform duration-300 relative z-10 ${isActive ? "scale-110" : "scale-100 group-hover:scale-105"}`} strokeWidth={isActive ? 2.5 : 2} />
+                  {isActive && (
+                    <span className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary shadow-[0_0_8px_hsl(45_100%_60%)] animate-fade-in" />
+                  )}
+                </button>
+              )
+            })}
+          </div >
+
+          {commitDialogPath && (
+            <div className="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+              <CommitDialog
+                filePath={commitDialogPath}
+                onCommit={handleCommitGitHubFile}
+                onClose={() => setCommitDialogPath(null)}
+              />
+            </div>
+          )}
+        </div >
+      )
+    };
+
+    // Return ELITE 60FPS Native Stack Wrapper for mobile
+    return <MobileStack activeScreen={screen} screens={mobileScreens} onBack={() => setScreen("editor")} />;
+  }
+
+  // Desktop Screen Router Layout
   if (screen === "login") {
     return <LoginScreen onContinue={() => setScreen("editor")} />;
   }
@@ -356,127 +566,6 @@ const Index = () => {
         onBack={() => setScreen("editor")}
         sessionId={localStorage.getItem("hugcode_session") || "default"}
       />
-    );
-  }
-
-  // Mobile layout
-  if (isMobile) {
-    return (
-      <div className="h-[100dvh] flex flex-col overflow-hidden bg-background grain-overlay">
-        {/* Mobile Header */}
-        <div className="h-11 bg-ide-sidebar border-b border-border flex items-center px-3 gap-2 shrink-0">
-          <div className="flex items-center gap-1.5">
-            <img src="/app-icon.png" alt="" className="w-5 h-5 rounded" />
-            <span className="text-xs font-display font-semibold tracking-tight text-foreground">
-              Hug<span className="text-primary">Code</span>
-            </span>
-          </div>
-          <div className="flex-1" />
-          <HeaderActions isMobile={true} onNavigate={setScreen} />
-        </div>
-
-        {/* Mobile Content */}
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          <div
-            key={mobileTab}
-            className={`flex-1 flex flex-col min-h-0 ${slideDirection === "left" ? "animate-slide-from-right" :
-              slideDirection === "right" ? "animate-slide-from-left" :
-                "animate-fade-in"
-              }`}
-          >
-            {mobileTab === "files" && (
-              <div className="flex-1 overflow-y-auto">
-                <FileExplorer
-                  files={files}
-                  activeFile={activeFilePath}
-                  onFileSelect={handleFileSelect}
-                />
-              </div>
-            )}
-
-            {mobileTab === "editor" && (
-              <>
-                <TabBar
-                  openFiles={openFiles}
-                  activeFile={activeFilePath}
-                  onTabSelect={setActiveFilePath}
-                  onTabClose={handleTabClose}
-                  onCommitFile={setCommitDialogPath}
-                />
-                <Suspense fallback={<LazyFallback />}>
-                  <CodeEditor
-                    file={activeFile}
-                    onContentChange={handleContentChange}
-                    settings={editorSettings}
-                  />
-                </Suspense>
-              </>
-            )}
-
-            {mobileTab === "preview" && (
-              <div className="flex-1">
-                <Suspense fallback={<LazyFallback />}>
-                  <PreviewPanel file={activeFile} />
-                </Suspense>
-              </div>
-            )}
-
-            {mobileTab === "chat" && (
-              <div className="flex-1">
-                <Suspense fallback={<LazyFallback />}>
-                  <AIChatPanel
-                    messages={messages}
-                    onSendMessage={handleSendMessage}
-                    onStreamMessage={handleStreamMessage}
-                    onInsertCode={handleInsertCode}
-                    projectContext={projectContext}
-                    onCreateFile={handleCreateFile}
-                  />
-                </Suspense>
-              </div>
-            )}
-
-            {mobileTab === "git" && (
-              <div className="flex-1 overflow-y-auto">
-                <Suspense fallback={<LazyFallback />}>
-                  <GitPanel />
-                </Suspense>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Mobile Bottom Nav */}
-        <div className="h-14 bg-ide-statusbar border-t border-border flex items-center justify-around px-1 shrink-0 safe-area-bottom">
-          {([
-            { id: "files" as MobileTab, icon: FolderTree, label: "Files" },
-            { id: "editor" as MobileTab, icon: Code2, label: "Code" },
-            { id: "preview" as MobileTab, icon: Eye, label: "Preview" },
-            { id: "chat" as MobileTab, icon: MessageSquare, label: "AI" },
-            { id: "git" as MobileTab, icon: GitBranch, label: "Git" },
-          ]).map(({ id, icon: Icon, label }) => (
-            <button
-              key={id}
-              onClick={() => switchToTab(id)}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[3rem] ${mobileTab === id
-                ? "text-primary"
-                : "text-muted-foreground"
-                }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{label}</span>
-            </button>
-          ))}
-        </div>
-
-        {commitDialogPath && (
-          <CommitDialog
-            filePath={commitDialogPath}
-            onCommit={handleCommitGitHubFile}
-            onClose={() => setCommitDialogPath(null)}
-          />
-        )}
-      </div>
     );
   }
 
