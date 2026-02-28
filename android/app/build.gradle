@@ -116,7 +116,15 @@ android {
         }
     }
 
-    def enableAbiSplits = (project.findProperty("ENABLE_ABI_SPLITS") ?: System.getenv("ENABLE_ABI_SPLITS") ?: "true").toBoolean()
+    def enableAbiSplitsConfig = (project.findProperty("ENABLE_ABI_SPLITS") ?: System.getenv("ENABLE_ABI_SPLITS") ?: "true").toBoolean()
+    def requestedTasks = gradle.startParameter.taskNames.collect { it.toLowerCase() }
+    def buildingBundle = requestedTasks.any { it.contains("bundle") }
+    def enableAbiSplits = enableAbiSplitsConfig && !buildingBundle
+
+    if (buildingBundle && enableAbiSplitsConfig) {
+        logger.lifecycle("Bundle task detected: disabling ABI splits to avoid AAB packaging conflicts.")
+    }
+
     splits {
         abi {
             enable enableAbiSplits
