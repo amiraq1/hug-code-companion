@@ -21,6 +21,11 @@ export function usePreview() {
   // Listen for messages from the iframe
   useEffect(() => {
     const handler = (e: MessageEvent) => {
+      const previewWindow = iframeRef.current?.contentWindow;
+      if (!previewWindow || e.source !== previewWindow || typeof e.data !== "object" || e.data === null) {
+        return;
+      }
+
       if (e.data?.type === "preview-error") {
         setErrors((prev) => [
           ...prev.slice(-19),
@@ -216,6 +221,7 @@ window.addEventListener("error", function(e) {
   }, "*");
 });
 window.addEventListener("message", function(e) {
+  if (e.source !== window.parent || typeof e.data !== "object" || e.data === null) return;
   if (e.data?.type === "exec-js") {
     try { eval(e.data.code); }
     catch(err) {
@@ -267,6 +273,7 @@ window.addEventListener("error",function(e){
   window.parent.postMessage({type:"preview-error",message:e.message,line:e.lineno,col:e.colno,source:e.filename},"*");
 });
 window.addEventListener("message",function(e){
+  if(e.source!==window.parent||typeof e.data!=="object"||e.data===null)return;
   if(e.data?.type==="exec-js"){try{eval(e.data.code)}catch(err){window.parent.postMessage({type:"preview-error",message:String(err)},"*")}}
 });
 console.log=function(...a){window.parent.postMessage({type:"preview-console",message:a.map(x=>typeof x==="object"?JSON.stringify(x):String(x)).join(" ")},"*")};

@@ -11,6 +11,10 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 20;
 const RATE_WINDOW_MS = 60_000;
 
+function isValidUUID(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 function getRequesterKey(req: Request, sessionId?: string): string {
   return (
     sessionId ||
@@ -143,10 +147,17 @@ serve(async (req) => {
 
   try {
     const { type, description, session_id, project_id, task_title } = await req.json();
-    const requesterKey = getRequesterKey(req, session_id);
+    const requesterKey = getRequesterKey(req, typeof session_id === "string" ? session_id : undefined);
     if (!checkRateLimit(requesterKey)) {
       return new Response(JSON.stringify({ error: "تم تجاوز حد الطلبات لهذه الدقيقة" }), {
         status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!session_id || typeof session_id !== "string" || !isValidUUID(session_id)) {
+      return new Response(JSON.stringify({ error: "session_id is required" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -167,6 +178,13 @@ serve(async (req) => {
 
     if (task_title && String(task_title).length > 500) {
       return new Response(JSON.stringify({ error: "عنوان المهمة طويل جداً" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (type === "analyze" && (!project_id || typeof project_id !== "string" || !isValidUUID(project_id))) {
+      return new Response(JSON.stringify({ error: "project_id is required for analyze" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -286,6 +304,19 @@ serve(async (req) => {
 
     // For analyze, save subtasks if project_id provided
     if (type === "analyze" && project_id && result.steps) {
+      const { data: project, error: projectErr } = await supabase
+        .from("projects")
+        .select("id, session_id")
+        .eq("id", project_id)
+        .single();
+
+      if (projectErr || !project || project.session_id !== session_id) {
+        return new Response(JSON.stringify({ error: "Forbidden project access" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const stepRows = result.steps.map((s: any, i: number) => ({
         project_id,
         title: s.title,

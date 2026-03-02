@@ -200,6 +200,18 @@ Deno.serve(async (req) => {
       case "commit_file": {
         // Get current file SHA if it exists
         let sha: string | undefined;
+        let branch = params.branch ? String(params.branch) : "";
+
+        if (!branch) {
+          const repoRes = await githubFetch(token, `/repos/${params.owner}/${params.repo}`);
+          if (repoRes.ok) {
+            const repoData = await repoRes.json();
+            branch = repoData.default_branch || "main";
+          } else {
+            branch = "main";
+          }
+        }
+
         const existingRes = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/contents/${params.path}`
@@ -218,7 +230,7 @@ Deno.serve(async (req) => {
               message: params.message || `Update ${params.path}`,
               content: toBase64Utf8(String(params.content ?? "")),
               sha,
-              branch: params.branch || "main",
+              branch,
             }),
           }
         );

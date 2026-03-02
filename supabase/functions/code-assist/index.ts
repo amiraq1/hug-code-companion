@@ -132,7 +132,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("code-assist error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined }),
+      JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

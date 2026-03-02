@@ -163,13 +163,15 @@ const Index = () => {
 
   const handleTabClose = useCallback(
     (path: string) => {
-      setOpenFilePaths((prev) => prev.filter((p) => p !== path));
-      if (activeFilePath === path) {
-        const remaining = openFilePaths.filter((p) => p !== path);
-        setActiveFilePath(remaining.length > 0 ? remaining[remaining.length - 1] : null);
-      }
+      setOpenFilePaths((prev) => {
+        const remaining = prev.filter((p) => p !== path);
+        setActiveFilePath((current) =>
+          current === path ? (remaining.length > 0 ? remaining[remaining.length - 1] : null) : current
+        );
+        return remaining;
+      });
     },
-    [activeFilePath, openFilePaths]
+    []
   );
 
   const handleContentChange = useCallback((path: string, content: string) => {
