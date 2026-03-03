@@ -31,8 +31,8 @@ vi.mock("@/stores/authStore", () => ({
   useAuthStore: () => ({
     status: "unauthenticated",
     username: null,
-    sessionId: "test-session",
     error: null,
+    sessionId: "test-session",
     isAuthenticated: false,
     isLoading: false,
     connect: vi.fn(),
@@ -58,7 +58,15 @@ vi.mock("@/components/ide/GitPanel", () => ({
 }));
 
 vi.mock("@/components/ide/NotificationHub", () => ({
-  NotificationHub: () => <div data-testid="notification-hub" />,
+  NotificationHub: () => null,
+}));
+
+vi.mock("@/lib/asyncStorage", () => ({
+  AsyncStorage: {
+    getItem: vi.fn().mockResolvedValue(null),
+    setItem: vi.fn().mockResolvedValue(undefined),
+    removeItem: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 // Import after mocks

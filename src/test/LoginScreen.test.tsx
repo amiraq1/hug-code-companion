@@ -24,7 +24,12 @@ describe("LoginScreen", () => {
   };
 
   beforeEach(() => {
-    mockUseAuthStore.mockReturnValue({ ...baseStore, connect: vi.fn() });
+    mockUseAuthStore.mockReturnValue({
+      ...baseStore,
+      connect: vi.fn(),
+      clearError: vi.fn(),
+      retry: vi.fn(),
+    });
   });
 
   it("renders the app branding", () => {
@@ -33,30 +38,30 @@ describe("LoginScreen", () => {
     expect(screen.getByText("Code")).toBeInTheDocument();
   });
 
-  it("renders sign in button when not authenticated", () => {
+  it("renders GitHub sign in button", () => {
     render(<LoginScreen onContinue={() => {}} />);
-    expect(screen.getByText("تسجيل الدخول عبر GitHub")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /تسجيل الدخول عبر github/i })).toBeInTheDocument();
   });
 
   it("renders continue without GitHub button", () => {
     render(<LoginScreen onContinue={() => {}} />);
-    expect(screen.getByText("المتابعة بدون GitHub")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /المتابعة بدون github/i })).toBeInTheDocument();
   });
 
   it("calls onContinue when continue button is clicked", () => {
     const onContinue = vi.fn();
     render(<LoginScreen onContinue={onContinue} />);
-    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
+    fireEvent.click(screen.getByRole("button", { name: /المتابعة بدون github/i }));
     expect(onContinue).toHaveBeenCalledOnce();
   });
 
-  it("renders Arabic welcome heading", () => {
+  it("renders welcome heading", () => {
     render(<LoginScreen onContinue={() => {}} />);
     expect(screen.getByText("مرحباً")).toBeInTheDocument();
   });
 
   it("renders security badge", () => {
     render(<LoginScreen onContinue={() => {}} />);
-    expect(screen.getByText(/OAuth 2.0/)).toBeInTheDocument();
+    expect(screen.getByText(/OAuth 2\.0/)).toBeInTheDocument();
   });
 });

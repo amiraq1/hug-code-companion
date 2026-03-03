@@ -6,6 +6,33 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 30;
+const RATE_WINDOW_MS = 60_000;
+
+function getRequesterKey(req: Request): string {
+  return (
+    req.headers.get("x-forwarded-for") ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const existing = rateLimitMap.get(key);
+
+  if (!existing || now > existing.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+
+  if (existing.count >= RATE_LIMIT) return false;
+  existing.count += 1;
+  return true;
+}
+
 const SYSTEM_PROMPT = `أنت مساعد برمجي ذكي اسمك HugCode Agent. تعمل داخل بيئة تطوير متكاملة (IDE) لمساعدة المطورين.
 
 قدراتك:
@@ -29,6 +56,21 @@ serve(async (req) => {
 
   try {
     const { messages, project_context } = await req.json();
+    const requesterKey = getRequesterKey(req);
+
+    if (!checkRateLimit(requesterKey)) {
+      return new Response(JSON.stringify({ error: "تم تجاوز حد الطلبات لهذه الدقيقة" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!Array.isArray(messages) || messages.length === 0 || messages.length > 50) {
+      return new Response(JSON.stringify({ error: "صيغة الرسائل غير صالحة" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
     if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY is not configured");
 
@@ -90,7 +132,7 @@ serve(async (req) => {
   } catch (e) {
     console.error("code-assist error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : String(e), stack: e instanceof Error ? e.stack : undefined }),
+      JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

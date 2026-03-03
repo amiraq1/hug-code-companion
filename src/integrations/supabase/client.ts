@@ -4,6 +4,31 @@ import type { Database } from './types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://placeholder-project.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder.placeholder";
+const SESSION_KEY = "hc_session_id";
+
+function encode(value: string): string {
+  return btoa(encodeURIComponent(value).split("").reverse().join(""));
+}
+
+function decode(value: string): string {
+  try {
+    return decodeURIComponent(atob(value).split("").reverse().join(""));
+  } catch {
+    return "";
+  }
+}
+
+function getOrCreateSessionId(): string {
+  const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+  if (raw) {
+    const decoded = decode(raw);
+    if (decoded) return decoded;
+  }
+
+  const sessionId = crypto.randomUUID();
+  localStorage.setItem(SESSION_KEY, encode(sessionId));
+  return sessionId;
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
@@ -13,5 +38,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  global: {
+    headers: {
+      "x-session-id": getOrCreateSessionId(),
+    },
+  },
 });

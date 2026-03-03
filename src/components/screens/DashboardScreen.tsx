@@ -101,6 +101,16 @@ export function DashboardScreen() {
         };
     }, [queryClient]);
 
+    const filteredTasks = useMemo(() => {
+        const query = search.trim().toLowerCase();
+        if (!query) return realTasksData;
+
+        return realTasksData.filter((task: any) =>
+            [task.id, task.project, task.status, task.assignee, task.priority, task.time]
+                .some((value) => String(value ?? "").toLowerCase().includes(query))
+        );
+    }, [realTasksData, search]);
+
     const columns = useMemo(() => [
         {
             accessorKey: "id",
@@ -149,7 +159,7 @@ export function DashboardScreen() {
     ], []);
 
     const table = useReactTable({
-        data: realTasksData,
+        data: filteredTasks,
         columns,
         state: { sorting },
         onSortingChange: setSorting,
@@ -330,7 +340,7 @@ export function DashboardScreen() {
 
                     {/* Pagination Footer */}
                     <div className="p-4 border-t border-border bg-secondary/20 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Showing 1 to {realTasksData.length} entries</span>
+                        <span>Showing 1 to {filteredTasks.length} entries</span>
                         <div className="flex gap-2">
                             <button className="px-3 py-1 bg-card border border-border rounded hover:bg-secondary transition disabled:opacity-50" disabled>Previous</button>
                             <button className="px-3 py-1 bg-card border border-border rounded hover:bg-secondary transition">Next</button>

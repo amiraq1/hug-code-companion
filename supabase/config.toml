@@ -1,13 +1,13 @@
-project_id = "gcbkeduwpibuddmirqwz"
+project_id = "kmuksmcyzamxtzzkocjr"
 
 [functions.github-auth]
 verify_jwt = false
 
 [functions.github-api]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-plan]
-verify_jwt = false
+verify_jwt = true
 
 [functions.code-assist]
-verify_jwt = false
+verify_jwt = true

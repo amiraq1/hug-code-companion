@@ -7,6 +7,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 20;
+const RATE_WINDOW_MS = 60_000;
+
+function isValidUUID(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function getRequesterKey(req: Request, sessionId?: string): string {
+  return (
+    sessionId ||
+    req.headers.get("x-forwarded-for") ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const existing = rateLimitMap.get(key);
+
+  if (!existing || now > existing.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return true;
+  }
+
+  if (existing.count >= RATE_LIMIT) return false;
+  existing.count += 1;
+  return true;
+}
+
 const SYSTEM_PROMPT = `أنت مدير مشاريع محترف ومهندس برمجيات. عند إعطائك وصف مشروع، قم بتوليد خطة عمل مفصلة.
 
 أجب دائماً باستخدام tool calling مع الدالة generate_project_plan.
@@ -115,6 +147,49 @@ serve(async (req) => {
 
   try {
     const { type, description, session_id, project_id, task_title } = await req.json();
+    const requesterKey = getRequesterKey(req, typeof session_id === "string" ? session_id : undefined);
+    if (!checkRateLimit(requesterKey)) {
+      return new Response(JSON.stringify({ error: "تم تجاوز حد الطلبات لهذه الدقيقة" }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!session_id || typeof session_id !== "string" || !isValidUUID(session_id)) {
+      return new Response(JSON.stringify({ error: "session_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (type && type !== "analyze" && type !== "generate") {
+      return new Response(JSON.stringify({ error: "نوع الطلب غير صالح" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (description && String(description).length > 20_000) {
+      return new Response(JSON.stringify({ error: "الوصف طويل جداً" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (task_title && String(task_title).length > 500) {
+      return new Response(JSON.stringify({ error: "عنوان المهمة طويل جداً" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (type === "analyze" && (!project_id || typeof project_id !== "string" || !isValidUUID(project_id))) {
+      return new Response(JSON.stringify({ error: "project_id is required for analyze" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
     if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY is not configured");
 
@@ -229,6 +304,19 @@ serve(async (req) => {
 
     // For analyze, save subtasks if project_id provided
     if (type === "analyze" && project_id && result.steps) {
+      const { data: project, error: projectErr } = await supabase
+        .from("projects")
+        .select("id, session_id")
+        .eq("id", project_id)
+        .single();
+
+      if (projectErr || !project || project.session_id !== session_id) {
+        return new Response(JSON.stringify({ error: "Forbidden project access" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       const stepRows = result.steps.map((s: any, i: number) => ({
         project_id,
         title: s.title,

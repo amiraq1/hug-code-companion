@@ -6,6 +6,32 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const ALLOWED_ACTIONS = new Set([
+  "list_repos",
+  "get_repo",
+  "list_contents",
+  "get_file",
+  "list_branches",
+  "create_branch",
+  "delete_branch",
+  "list_commits",
+  "get_status",
+  "commit_file",
+  "create_repo",
+  "compare_commits",
+  "get_commit_diff",
+  "merge_branch",
+  "pull_status",
+]);
+
+function isValidUUID(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
+function toBase64Utf8(value: string): string {
+  return btoa(String.fromCharCode(...new TextEncoder().encode(value)));
+}
+
 async function getToken(sessionId: string): Promise<string | null> {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -41,8 +67,15 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { session_id, action, ...params } = body;
 
-    if (!session_id) {
+    if (!session_id || !isValidUUID(session_id)) {
       return new Response(JSON.stringify({ error: "session_id required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!action || typeof action !== "string" || !ALLOWED_ACTIONS.has(action)) {
+      return new Response(JSON.stringify({ error: "Unknown or blocked action" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -167,6 +200,18 @@ Deno.serve(async (req) => {
       case "commit_file": {
         // Get current file SHA if it exists
         let sha: string | undefined;
+        let branch = params.branch ? String(params.branch) : "";
+
+        if (!branch) {
+          const repoRes = await githubFetch(token, `/repos/${params.owner}/${params.repo}`);
+          if (repoRes.ok) {
+            const repoData = await repoRes.json();
+            branch = repoData.default_branch || "main";
+          } else {
+            branch = "main";
+          }
+        }
+
         const existingRes = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/contents/${params.path}`
@@ -183,9 +228,9 @@ Deno.serve(async (req) => {
             method: "PUT",
             body: JSON.stringify({
               message: params.message || `Update ${params.path}`,
-              content: btoa(params.content),
+              content: toBase64Utf8(String(params.content ?? "")),
               sha,
-              branch: params.branch || "main",
+              branch,
             }),
           }
         );
@@ -314,8 +359,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

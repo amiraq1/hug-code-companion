@@ -1,24 +1,62 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuthStore } from "@/stores/authStore";
+import { useState, useEffect, useCallback } from "react";
+
+const SESSION_KEY = "hc_session_id";
+const CSRF_KEY = "hc_oauth_csrf";
+
+function encode(value: string): string {
+  return btoa(encodeURIComponent(value).split("").reverse().join(""));
+}
+
+function decode(value: string): string {
+  try {
+    return decodeURIComponent(atob(value).split("").reverse().join(""));
+  } catch {
+    return "";
+  }
+}
+
+function getSecureItem(key: string): string | null {
+  const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
+  if (!raw) return null;
+  const decoded = decode(raw);
+  return decoded || null;
+}
+
+function setSecureItem(key: string, value: string, persistent = false): void {
+  const encoded = encode(value);
+  if (persistent) {
+    localStorage.setItem(key, encoded);
+    return;
+  }
+  sessionStorage.setItem(key, encoded);
+}
+
+function removeSecureItem(key: string): void {
+  sessionStorage.removeItem(key);
+  localStorage.removeItem(key);
+}
 
 /** Get session ID from auth store's secure storage */
 function getSessionId(): string {
-  // Read from secure storage (same key as authStore)
-  const SESSION_KEY = "hc_session_id";
-  const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
-  if (raw) {
-    try {
-      return decodeURIComponent(atob(raw).split("").reverse().join(""));
-    } catch {
-      // Ignore format errors
-    }
-  }
+  const existing = getSecureItem(SESSION_KEY);
+  if (existing) return existing;
+
   // Fallback
   const id = crypto.randomUUID();
-  const encoded = btoa(encodeURIComponent(id).split("").reverse().join(""));
-  localStorage.setItem(SESSION_KEY, encoded);
+  setSecureItem(SESSION_KEY, id, true);
   return id;
+}
+
+function generateCsrfToken(): string {
+  const csrf = crypto.randomUUID();
+  setSecureItem(CSRF_KEY, csrf);
+  return csrf;
+}
+
+function validateAndConsumeCsrf(token: string): boolean {
+  const expected = getSecureItem(CSRF_KEY);
+  removeSecureItem(CSRF_KEY);
+  return expected === token;
 }
 
 export interface GitHubRepo {
@@ -105,7 +143,10 @@ export function useGitHub() {
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`,
         {
-          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+          headers: {
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
         }
       );
       const statusData = await res.json();
@@ -121,7 +162,16 @@ export function useGitHub() {
   useEffect(() => {
     checkStatus();
     const params = new URLSearchParams(window.location.search);
+    const csrfToken = params.get("csrf_token");
+
     if (params.get("github_connected") === "true") {
+      if (csrfToken && !validateAndConsumeCsrf(csrfToken)) {
+        setConnected(false);
+        setUsername(null);
+        setLoading(false);
+        window.history.replaceState({}, "", window.location.pathname);
+        return;
+      }
       setConnected(true);
       setUsername(params.get("github_username"));
       window.history.replaceState({}, "", window.location.pathname);
@@ -131,7 +181,8 @@ export function useGitHub() {
   const connect = useCallback(() => {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
     const redirectUri = window.location.origin;
-    window.location.href = `https://${projectId}.supabase.co/functions/v1/github-auth/authorize?session_id=${sessionId}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const csrfToken = generateCsrfToken();
+    window.location.href = `https://${projectId}.supabase.co/functions/v1/github-auth/authorize?session_id=${sessionId}&redirect_uri=${encodeURIComponent(redirectUri)}&csrf_token=${csrfToken}`;
   }, [sessionId]);
 
   const disconnect = useCallback(async () => {
@@ -141,6 +192,7 @@ export function useGitHub() {
       headers: {
         "Content-Type": "application/json",
         apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ session_id: sessionId }),
     });
@@ -163,6 +215,7 @@ export function useGitHub() {
             headers: {
               "Content-Type": "application/json",
               apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
             body: JSON.stringify({ session_id: sessionId, action, ...params }),
           }
@@ -202,8 +255,8 @@ export function useGitHub() {
   );
 
   const commitFile = useCallback(
-    (owner: string, repo: string, path: string, content: string, message: string, branch = "main") =>
-      apiCall("commit_file", { owner, repo, path, content, message, branch }),
+    (owner: string, repo: string, path: string, content: string, message: string, branch?: string) =>
+      apiCall("commit_file", { owner, repo, path, content, message, ...(branch ? { branch } : {}) }),
     [apiCall]
   );
 

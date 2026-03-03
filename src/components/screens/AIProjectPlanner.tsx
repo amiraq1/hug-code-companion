@@ -244,6 +244,9 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-plan", {
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
         body: { type: "generate", description, session_id: sessionId },
       });
       if (error) throw error;
@@ -269,8 +272,12 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
     setAnalyzing(task.id);
     try {
       const { data, error } = await supabase.functions.invoke("generate-plan", {
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
         body: {
           type: "analyze",
+          session_id: sessionId,
           task_title: task.title,
           description: task.description,
           project_id: task.project_id,

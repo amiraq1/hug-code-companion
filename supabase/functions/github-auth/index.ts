@@ -40,6 +40,66 @@ function sanitizeRedirectUri(uri: string, fallback: string): string {
   return fallback;
 }
 
+function toBase64Url(bytes: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...bytes));
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fromBase64Url(value: string): Uint8Array {
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+}
+
+function secureEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+async function signValue(value: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
+  return toBase64Url(new Uint8Array(signature));
+}
+
+type OAuthState = {
+  session_id: string;
+  redirect_uri: string;
+  csrf_token?: string;
+  ts?: number;
+};
+
+async function buildSignedState(payload: OAuthState, secret: string): Promise<string> {
+  const encodedPayload = toBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
+  const signature = await signValue(encodedPayload, secret);
+  return `${encodedPayload}.${signature}`;
+}
+
+async function parseAndVerifyState(stateParam: string, secret: string): Promise<OAuthState | null> {
+  const [encodedPayload, signature] = stateParam.split(".");
+  if (!encodedPayload || !signature) return null;
+
+  const expectedSignature = await signValue(encodedPayload, secret);
+  if (!secureEqual(signature, expectedSignature)) return null;
+
+  try {
+    const payloadJson = new TextDecoder().decode(fromBase64Url(encodedPayload));
+    return JSON.parse(payloadJson);
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -52,6 +112,7 @@ Deno.serve(async (req) => {
   const clientSecret = Deno.env.get("GITHUB_CLIENT_SECRET")!;
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const stateSecret = Deno.env.get("OAUTH_STATE_SECRET") || clientSecret;
 
   // ─── Step 1: Start OAuth ──────────────────────────────────────────
   if (path === "authorize") {
@@ -63,6 +124,10 @@ Deno.serve(async (req) => {
       return new Response("Invalid session_id", { status: 400, headers: corsHeaders });
     }
 
+    if (!csrfToken) {
+      return new Response("Missing csrf_token", { status: 400, headers: corsHeaders });
+    }
+
     if (!checkRateLimit(`auth:${sessionId}`)) {
       return new Response("Too many requests", { status: 429, headers: corsHeaders });
     }
@@ -70,12 +135,15 @@ Deno.serve(async (req) => {
     const safeRedirect = sanitizeRedirectUri(redirectUri, supabaseUrl);
 
     // Include CSRF token in state for round-trip verification
-    const state = btoa(JSON.stringify({
-      session_id: sessionId,
-      redirect_uri: safeRedirect,
-      csrf_token: csrfToken,
-      ts: Date.now(),
-    }));
+    const state = await buildSignedState(
+      {
+        session_id: sessionId,
+        redirect_uri: safeRedirect,
+        csrf_token: csrfToken,
+        ts: Date.now(),
+      },
+      stateSecret
+    );
 
     const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo,user&state=${state}`;
 
@@ -94,12 +162,12 @@ Deno.serve(async (req) => {
       return new Response("Missing code or state", { status: 400, headers: corsHeaders });
     }
 
-    let state: { session_id: string; redirect_uri: string; csrf_token?: string; ts?: number };
-    try {
-      state = JSON.parse(atob(stateParam));
-    } catch {
+    const state = await parseAndVerifyState(stateParam, stateSecret);
+    if (!state) {
       return new Response("Invalid state parameter", { status: 400, headers: corsHeaders });
     }
+
+    const safeRedirect = sanitizeRedirectUri(state.redirect_uri || "", supabaseUrl);
 
     // Validate session_id
     if (!state.session_id || !isValidUUID(state.session_id)) {
@@ -108,7 +176,7 @@ Deno.serve(async (req) => {
 
     // Check state age (max 10 minutes)
     if (state.ts && Date.now() - state.ts > 10 * 60 * 1000) {
-      const redirectUrl = new URL(state.redirect_uri || supabaseUrl);
+      const redirectUrl = new URL(safeRedirect);
       redirectUrl.searchParams.set("auth_error", "OAuth session expired. Please try again.");
       return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
     }
@@ -128,7 +196,7 @@ Deno.serve(async (req) => {
     const tokenData = await tokenRes.json();
 
     if (tokenData.error) {
-      const redirectUrl = new URL(state.redirect_uri || supabaseUrl);
+      const redirectUrl = new URL(safeRedirect);
       redirectUrl.searchParams.set("auth_error", tokenData.error_description || tokenData.error);
       return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
     }
@@ -139,7 +207,7 @@ Deno.serve(async (req) => {
     });
 
     if (!userRes.ok) {
-      const redirectUrl = new URL(state.redirect_uri || supabaseUrl);
+      const redirectUrl = new URL(safeRedirect);
       redirectUrl.searchParams.set("auth_error", "Failed to fetch GitHub user info");
       return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
     }
@@ -160,13 +228,13 @@ Deno.serve(async (req) => {
 
     if (dbError) {
       console.error("DB error storing token:", dbError.message);
-      const redirectUrl = new URL(state.redirect_uri || supabaseUrl);
+      const redirectUrl = new URL(safeRedirect);
       redirectUrl.searchParams.set("auth_error", "Failed to save authentication");
       return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
     }
 
     // Redirect back to app with CSRF token for client verification
-    const redirectUrl = new URL(state.redirect_uri || supabaseUrl);
+    const redirectUrl = new URL(safeRedirect);
     redirectUrl.searchParams.set("github_connected", "true");
     redirectUrl.searchParams.set("github_username", userData.login);
     if (state.csrf_token) {

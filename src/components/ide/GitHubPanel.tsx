@@ -6,7 +6,6 @@ import {
   File,
   ArrowLeft,
   Upload,
-  Plus,
   LogOut,
   Loader2,
   RefreshCw,
@@ -40,7 +39,6 @@ export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
   const [commitMsg, setCommitMsg] = useState("");
   const [commitFilePath, setCommitFilePath] = useState("");
   const [commitContent, setCommitContent] = useState("");
-  const [showCommit, setShowCommit] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [view, setView] = useState<"repos" | "browser" | "commit">("repos");
 
@@ -101,11 +99,17 @@ export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
     setCommitting(true);
     try {
       const [owner, repoName] = selectedRepo.full_name.split("/");
-      await commitFile(owner, repoName, commitFilePath, commitContent, commitMsg);
+      await commitFile(
+        owner,
+        repoName,
+        commitFilePath,
+        commitContent,
+        commitMsg,
+        selectedRepo.default_branch
+      );
       setCommitMsg("");
       setCommitFilePath("");
       setCommitContent("");
-      setShowCommit(false);
       if (view === "browser") await loadContents(selectedRepo, currentPath);
     } catch (err) {
       console.error("Commit failed:", err);
@@ -176,7 +180,7 @@ export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
         )}
         {selectedRepo && (
           <button
-            onClick={() => { setShowCommit(!showCommit); setView("commit"); }}
+            onClick={() => setView("commit")}
             className="p-1 rounded hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground ml-auto"
             title="Commit & Push"
           >
@@ -252,7 +256,9 @@ export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
                       const [owner, repoName] = selectedRepo.full_name.split("/");
                       const fileData = await getFile(owner, repoName, item.path);
                       if (fileData?.content && fileData?.encoding === "base64") {
-                        const decoded = atob(fileData.content.replace(/\n/g, ""));
+                        const base64Content = fileData.content.replace(/\n/g, "");
+                        const bytes = Uint8Array.from(atob(base64Content), (char) => char.charCodeAt(0));
+                        const decoded = new TextDecoder().decode(bytes);
                         const ext = item.name.split(".").pop() || "";
                         const langMap: Record<string, string> = {
                           ts: "typescript", tsx: "typescript", js: "typescript", jsx: "typescript",
