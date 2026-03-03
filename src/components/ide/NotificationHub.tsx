@@ -85,8 +85,10 @@ export function NotificationHub() {
         <Popover>
             <PopoverTrigger asChild>
                 <button
+                    type="button"
                     className="relative p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
                     title="Notifications"
+                    aria-label="Open notifications"
                     onClick={() => setUnreadCount(0)}
                 >
                     <Bell className="h-3.5 w-3.5" />
@@ -104,6 +106,7 @@ export function NotificationHub() {
                     </h3>
                     {notifications.length > 0 && (
                         <button
+                            type="button"
                             onClick={markAllRead}
                             className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
                         >

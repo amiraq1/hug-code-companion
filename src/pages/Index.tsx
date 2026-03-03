@@ -7,31 +7,17 @@ import { DEFAULT_FILES, flattenFiles } from "@/stores/editorStore";
 import type { FileNode, ChatMessage } from "@/stores/editorStore";
 import {
   MessageSquare,
-  PanelLeftClose,
-  PanelLeft,
-  Github,
   Eye,
   GitBranch,
-  Settings,
-  FolderGit2,
   Loader2,
   Code2,
   FolderTree,
-  Sparkles,
 } from "lucide-react";
 import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSwipe, type SwipeDirection } from "@/hooks/useSwipe";
 import { LoginScreen } from "@/components/screens/LoginScreen";
-import { ReposScreen } from "@/components/screens/ReposScreen";
-import {
-  SettingsScreen,
-  DEFAULT_EDITOR_SETTINGS,
-  type EditorSettings,
-} from "@/components/screens/SettingsScreen";
-import { AIProjectPlanner } from "@/components/screens/AIProjectPlanner";
-import { DashboardScreen } from "@/components/screens/DashboardScreen";
-import { ProfileScreen } from "@/components/screens/ProfileScreen";
+import { DEFAULT_EDITOR_SETTINGS, type EditorSettings } from "@/components/screens/settings.types";
 import { HeaderActions } from "@/components/ide/HeaderActions";
 
 // Lazy load heavy components
@@ -40,10 +26,21 @@ const AIChatPanel = lazy(() => import("@/components/ide/AIChatPanel").then(m => 
 const GitHubPanel = lazy(() => import("@/components/ide/GitHubPanel").then(m => ({ default: m.GitHubPanel })));
 const GitPanel = lazy(() => import("@/components/ide/GitPanel").then(m => ({ default: m.GitPanel })));
 const PreviewPanel = lazy(() => import("@/components/ide/PreviewPanel").then(m => ({ default: m.PreviewPanel })));
+const ReposScreen = lazy(() => import("@/components/screens/ReposScreen").then(m => ({ default: m.ReposScreen })));
+const SettingsScreen = lazy(() => import("@/components/screens/SettingsScreen").then(m => ({ default: m.SettingsScreen })));
+const AIProjectPlanner = lazy(() => import("@/components/screens/AIProjectPlanner").then(m => ({ default: m.AIProjectPlanner })));
+const DashboardScreen = lazy(() => import("@/components/screens/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
+const ProfileScreen = lazy(() => import("@/components/screens/ProfileScreen").then(m => ({ default: m.ProfileScreen })));
 
 const LazyFallback = () => (
   <div className="flex-1 flex items-center justify-center bg-ide-editor">
     <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+  </div>
+);
+
+const ScreenFallback = () => (
+  <div className="h-screen flex items-center justify-center bg-background">
+    <Loader2 className="h-6 w-6 text-muted-foreground animate-spin" />
   </div>
 );
 
@@ -313,7 +310,9 @@ const Index = () => {
             ← العودة للمحرر
           </button>
         </div>
-        <DashboardScreen />
+        <Suspense fallback={<ScreenFallback />}>
+          <DashboardScreen />
+        </Suspense>
       </div>
     );
   }
@@ -326,36 +325,44 @@ const Index = () => {
             ← العودة للمحرر
           </button>
         </div>
-        <ProfileScreen />
+        <Suspense fallback={<ScreenFallback />}>
+          <ProfileScreen />
+        </Suspense>
       </div>
     );
   }
 
   if (screen === "repos") {
     return (
-      <ReposScreen
-        onSelectRepo={handleSelectRepo}
-        onBack={() => setScreen("editor")}
-      />
+      <Suspense fallback={<ScreenFallback />}>
+        <ReposScreen
+          onSelectRepo={handleSelectRepo}
+          onBack={() => setScreen("editor")}
+        />
+      </Suspense>
     );
   }
 
   if (screen === "settings") {
     return (
-      <SettingsScreen
-        onBack={() => setScreen("editor")}
-        editorSettings={editorSettings}
-        onSettingsChange={setEditorSettings}
-      />
+      <Suspense fallback={<ScreenFallback />}>
+        <SettingsScreen
+          onBack={() => setScreen("editor")}
+          editorSettings={editorSettings}
+          onSettingsChange={setEditorSettings}
+        />
+      </Suspense>
     );
   }
 
   if (screen === "ai-planner") {
     return (
-      <AIProjectPlanner
-        onBack={() => setScreen("editor")}
-        sessionId={localStorage.getItem("hugcode_session") || "default"}
-      />
+      <Suspense fallback={<ScreenFallback />}>
+        <AIProjectPlanner
+          onBack={() => setScreen("editor")}
+          sessionId={localStorage.getItem("hugcode_session") || "default"}
+        />
+      </Suspense>
     );
   }
 

@@ -34,6 +34,19 @@ const SESSION_KEY = "hc_session_id";
 const CSRF_KEY = "hc_oauth_csrf";
 const AUTH_CACHE_KEY = "hc_auth_cache";
 
+function createTimeoutSignal(ms: number): { signal: AbortSignal; clear: () => void } {
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+    return { signal: AbortSignal.timeout(ms), clear: () => {} };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), ms);
+  return {
+    signal: controller.signal,
+    clear: () => globalThis.clearTimeout(timeoutId),
+  };
+}
+
 /** Simple obfuscation for session storage (not crypto-grade, but prevents casual reading) */
 function encode(value: string): string {
   return btoa(encodeURIComponent(value).split("").reverse().join(""));
@@ -164,14 +177,17 @@ export function useAuthStore() {
     setState(prev => ({ ...prev, status: "loading" }));
 
     try {
+      const timeout = createTimeoutSignal(10000);
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`,
-        {
+      let res: Response;
+      try {
+        res = await fetch(`https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`, {
           headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-          signal: AbortSignal.timeout(10000),
-        }
-      );
+          signal: timeout.signal,
+        });
+      } finally {
+        timeout.clear();
+      }
 
       if (!res.ok) throw new Error(`Status check failed: ${res.status}`);
 

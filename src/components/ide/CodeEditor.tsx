@@ -2,7 +2,7 @@ import { memo, useMemo, useCallback } from "react";
 import Editor from "@monaco-editor/react";
 import { Loader2 } from "lucide-react";
 import type { FileNode } from "@/stores/editorStore";
-import type { EditorSettings } from "@/components/screens/SettingsScreen";
+import type { EditorSettings } from "@/components/screens/settings.types";
 
 interface CodeEditorProps {
   file: FileNode | null;

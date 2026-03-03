@@ -1,5 +1,12 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+
+const mockListRepos = vi.fn().mockResolvedValue([]);
+const mockListBranches = vi.fn().mockResolvedValue([]);
+const mockCreateBranch = vi.fn();
+const mockDeleteBranch = vi.fn();
+const mockListCommits = vi.fn().mockResolvedValue([]);
+const mockGetStatus = vi.fn().mockResolvedValue({ files: [] });
 
 // Mock useGitHub
 vi.mock("@/hooks/useGitHub", () => ({
@@ -10,12 +17,12 @@ vi.mock("@/hooks/useGitHub", () => ({
     online: true,
     connect: vi.fn(),
     disconnect: vi.fn(),
-    listRepos: vi.fn().mockResolvedValue([]),
-    listBranches: vi.fn().mockResolvedValue([]),
-    createBranch: vi.fn(),
-    deleteBranch: vi.fn(),
-    listCommits: vi.fn().mockResolvedValue([]),
-    getStatus: vi.fn().mockResolvedValue({ files: [] }),
+    listRepos: mockListRepos,
+    listBranches: mockListBranches,
+    createBranch: mockCreateBranch,
+    deleteBranch: mockDeleteBranch,
+    listCommits: mockListCommits,
+    getStatus: mockGetStatus,
   }),
   GitHubError: class extends Error {
     type: string;
@@ -29,30 +36,46 @@ vi.mock("@/hooks/useGitHub", () => ({
 import { GitPanel } from "@/components/ide/GitPanel";
 
 describe("GitPanel", () => {
-  it("renders connected state with username", () => {
-    render(<GitPanel />);
+  beforeEach(() => {
+    mockListRepos.mockClear();
+    mockListBranches.mockClear();
+    mockCreateBranch.mockClear();
+    mockDeleteBranch.mockClear();
+    mockListCommits.mockClear();
+    mockGetStatus.mockClear();
+  });
+
+  const renderPanel = async (withRepo = false) => {
+    render(<GitPanel currentRepo={withRepo ? { owner: "testuser", repo: "my-repo" } : undefined} />);
+    await waitFor(() => expect(mockListRepos).toHaveBeenCalled());
+  };
+
+  it("renders connected state with username", async () => {
+    await renderPanel();
     expect(screen.getByText("@testuser")).toBeInTheDocument();
     expect(screen.getByText("Git")).toBeInTheDocument();
   });
 
-  it("shows all tabs", () => {
-    render(<GitPanel />);
+  it("shows all tabs", async () => {
+    await renderPanel();
     expect(screen.getByText("Status")).toBeInTheDocument();
     expect(screen.getByText("Branches")).toBeInTheDocument();
     expect(screen.getByText("Log")).toBeInTheDocument();
   });
 
-  it("shows repo selector", () => {
-    render(<GitPanel />);
+  it("shows repo selector", async () => {
+    await renderPanel();
     expect(screen.getByText("Select repository...")).toBeInTheDocument();
   });
 
-  it("switches between tabs", () => {
-    render(<GitPanel currentRepo={{ owner: "testuser", repo: "my-repo" }} />);
+  it("switches between tabs", async () => {
+    await renderPanel(true);
+    await waitFor(() => expect(mockGetStatus).toHaveBeenCalled());
     fireEvent.click(screen.getByText("Branches"));
     // Branches tab is now active
     const branchesBtn = screen.getByText("Branches");
     expect(branchesBtn.closest("button")).toHaveClass("text-primary");
+    await waitFor(() => expect(mockListBranches).toHaveBeenCalled());
   });
 });
 
