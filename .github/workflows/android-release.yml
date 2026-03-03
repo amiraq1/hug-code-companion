@@ -8,7 +8,46 @@ permissions:
   contents: read
 
 jobs:
+  signing_precheck:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+      missing: ${{ steps.check.outputs.missing }}
+    steps:
+      - name: Validate signing secrets
+        id: check
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!key}" ]; then
+              missing="$missing $key"
+            fi
+          done
+
+          if [ -n "$missing" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "missing=${missing# }" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "missing=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Precheck summary
+        run: |
+          if [ "${{ steps.check.outputs.ready }}" = "true" ]; then
+            echo "Signing secrets are configured. Release build will run."
+          else
+            echo "::warning::Skipping Android release build. Missing secrets: ${{ steps.check.outputs.missing }}"
+          fi
+
   release:
+    needs: signing_precheck
+    if: ${{ needs.signing_precheck.outputs.ready == 'true' }}
     runs-on: ubuntu-latest
     env:
       APP_VERSION_CODE: ${{ vars.APP_VERSION_CODE || '1' }}
@@ -31,24 +70,6 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Validate signing secrets
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: |
-          missing=0
-          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
-            if [ -z "${!key}" ]; then
-              echo "::error::Missing required secret: $key"
-              missing=1
-            fi
-          done
-          if [ "$missing" -ne 0 ]; then
-            exit 1
-          fi
 
       - name: Install dependencies
         run: npm ci
@@ -102,3 +123,14 @@ jobs:
             android/app/build/outputs/apk/prod/release/*.apk
             android/app/build/outputs/bundle/prodRelease/*.aab
             android/build/reports/release/artifact-size-report.txt
+
+  release_skipped:
+    needs: signing_precheck
+    if: ${{ needs.signing_precheck.outputs.ready != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain skip reason
+        run: |
+          echo "Android release workflow skipped."
+          echo "Missing secrets: ${{ needs.signing_precheck.outputs.missing }}"
+          echo "Configure repository secrets to enable signed Android release builds."
