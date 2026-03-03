@@ -99,6 +99,8 @@ jobs:
       - name: Build signed prodRelease (APK + AAB)
         run: |
           cd android
+          chmod +x gradlew
+          sed -i 's/\r$//' gradlew
           ./gradlew --no-daemon clean assembleProdRelease bundleProdRelease app:sizeReport --console=plain \
             -PAPP_VERSION_CODE="$APP_VERSION_CODE" \
             -PAPP_VERSION_NAME="$APP_VERSION_NAME"
