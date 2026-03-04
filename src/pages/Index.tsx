@@ -12,6 +12,9 @@ import {
   Loader2,
   Code2,
   FolderTree,
+  Sparkles,
+  FolderGit2,
+  Settings,
 } from "lucide-react";
 import { useGitHub, type GitHubRepo } from "@/hooks/useGitHub";
 import { useIsMobile } from "@/hooks/use-mobile";
