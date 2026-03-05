@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Test the navigation flow by rendering Index and simulating screen changes
 // We mock heavy components to focus on navigation logic
@@ -71,64 +72,74 @@ vi.mock("@/lib/asyncStorage", () => ({
 // Import after mocks
 import Index from "@/pages/Index";
 
+function renderIndex() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <Index />
+    </QueryClientProvider>
+  );
+}
+
 describe("App Navigation", () => {
   it("starts on login screen", () => {
-    render(<Index />);
+    renderIndex();
     expect(screen.getByText("مرحباً")).toBeInTheDocument();
     expect(screen.getByText("تسجيل الدخول عبر GitHub")).toBeInTheDocument();
   });
 
   it("navigates to editor when Continue without GitHub is clicked", () => {
-    render(<Index />);
+    renderIndex();
     fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     // Should see editor elements
     expect(screen.getByText("Explorer")).toBeInTheDocument();
   });
 
-  it("shows settings screen when settings is clicked from editor", () => {
-    render(<Index />);
+  it("shows settings screen when settings is clicked from editor", async () => {
+    renderIndex();
     // Go to editor first
     fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     // Click settings
     fireEvent.click(screen.getByTitle("Settings"));
-    expect(screen.getByText("Settings")).toBeInTheDocument();
-    expect(screen.getByText("Font Size")).toBeInTheDocument();
+    expect(await screen.findByText("Settings")).toBeInTheDocument();
+    expect(await screen.findByText("Font Size")).toBeInTheDocument();
   });
 
-  it("returns to editor from settings", () => {
-    render(<Index />);
+  it("returns to editor from settings", async () => {
+    renderIndex();
     fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     fireEvent.click(screen.getByTitle("Settings"));
+    await screen.findByText("Font Size");
     // Click back
     const buttons = screen.getAllByRole("button");
     fireEvent.click(buttons[0]); // ArrowLeft button
-    expect(screen.getByText("Explorer")).toBeInTheDocument();
+    expect(await screen.findByText("Explorer")).toBeInTheDocument();
   });
 
-  it("navigates to repos screen from editor", () => {
-    render(<Index />);
+  it("navigates to repos screen from editor", async () => {
+    renderIndex();
     fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
     fireEvent.click(screen.getByTitle("Repositories"));
-    expect(screen.getByText("/ repositories")).toBeInTheDocument();
+    expect(await screen.findByText("/ repositories")).toBeInTheDocument();
   });
 
   it("toggles sidebar visibility", () => {
-    render(<Index />);
+    renderIndex();
     fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
-    // Explorer should be visible
     expect(screen.getByText("Explorer")).toBeInTheDocument();
-    // Find and click the PanelLeftClose button (first icon button after branding)
-    const sidebarToggle = screen.getAllByRole("button").find(
-      (btn) => btn.getAttribute("class")?.includes("rounded-md") && !btn.getAttribute("title")
-    );
-    // Verify sidebar is present
-    expect(screen.getByText("Explorer")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Hide sidebar"));
+    expect(screen.queryByText("Explorer")).not.toBeInTheDocument();
   });
 });
 
 describe("Editor Features", () => {
   beforeEach(() => {
-    render(<Index />);
+    renderIndex();
     fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
   });
 
@@ -152,6 +163,6 @@ describe("Editor Features", () => {
   });
 
   it("shows title bar branding", () => {
-    expect(screen.getByText("Hug")).toBeInTheDocument();
+    expect(screen.getByText("✨ بيئة التطوير")).toBeInTheDocument();
   });
 });

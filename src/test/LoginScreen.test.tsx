@@ -1,28 +1,37 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LoginScreen } from "@/components/screens/LoginScreen";
 
-const mockConnect = vi.fn();
-const mockClearError = vi.fn();
-const mockRetry = vi.fn();
+const mockUseAuthStore = vi.fn();
 
 vi.mock("@/stores/authStore", () => ({
-  useAuthStore: () => ({
-    status: "unauthenticated",
-    username: null,
-    error: null,
-    sessionId: "test-session",
-    isAuthenticated: false,
-    isLoading: false,
-    connect: mockConnect,
-    disconnect: vi.fn(),
-    clearError: mockClearError,
-    retry: mockRetry,
-    checkStatus: vi.fn(),
-  }),
+  useAuthStore: () => mockUseAuthStore(),
 }));
 
 describe("LoginScreen", () => {
+  const baseStore = {
+    status: "unauthenticated" as const,
+    username: null,
+    sessionId: "test-session",
+    error: null,
+    isAuthenticated: false,
+    isLoading: false,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    clearError: vi.fn(),
+    retry: vi.fn(),
+    checkStatus: vi.fn(),
+  };
+
+  beforeEach(() => {
+    mockUseAuthStore.mockReturnValue({
+      ...baseStore,
+      connect: vi.fn(),
+      clearError: vi.fn(),
+      retry: vi.fn(),
+    });
+  });
+
   it("renders the app branding", () => {
     render(<LoginScreen onContinue={() => {}} />);
     expect(screen.getByText("Hug")).toBeInTheDocument();
@@ -39,7 +48,7 @@ describe("LoginScreen", () => {
     expect(screen.getByRole("button", { name: /المتابعة بدون github/i })).toBeInTheDocument();
   });
 
-  it("calls onContinue when Continue button is clicked", () => {
+  it("calls onContinue when continue button is clicked", () => {
     const onContinue = vi.fn();
     render(<LoginScreen onContinue={onContinue} />);
     fireEvent.click(screen.getByRole("button", { name: /المتابعة بدون github/i }));

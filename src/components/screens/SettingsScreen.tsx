@@ -5,41 +5,22 @@ import {
   Code2,
   Github,
   Info,
-  Moon,
   Type,
   Maximize2,
   WrapText,
   Hash,
   Indent,
   LogOut,
-  ExternalLink,
 } from "lucide-react";
 import { useGitHub } from "@/hooks/useGitHub";
+import { Switch } from "@/components/ui/switch";
+import type { EditorSettings } from "./settings.types";
 
 interface SettingsScreenProps {
   onBack: () => void;
   editorSettings: EditorSettings;
   onSettingsChange: (settings: EditorSettings) => void;
 }
-
-export interface EditorSettings {
-  fontSize: number;
-  tabSize: number;
-  wordWrap: boolean;
-  lineNumbers: boolean;
-  minimap: boolean;
-  bracketPairs: boolean;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const DEFAULT_EDITOR_SETTINGS: EditorSettings = {
-  fontSize: 13,
-  tabSize: 2,
-  wordWrap: true,
-  lineNumbers: true,
-  minimap: true,
-  bracketPairs: true,
-};
 
 type SettingsTab = "editor" | "github" | "about";
 
@@ -316,16 +297,7 @@ function ToggleSetting({
 }) {
   return (
     <SettingRow icon={icon} label={label} description={description}>
-      <button
-        onClick={() => onChange(!value)}
-        className={`w-10 h-5 rounded-full relative transition-colors duration-200 ${value ? "bg-primary" : "bg-secondary"
-          }`}
-      >
-        <div
-          className={`absolute top-0.5 w-4 h-4 rounded-full bg-background shadow transition-transform duration-200 ${value ? "translate-x-5" : "translate-x-0.5"
-            }`}
-        />
-      </button>
+      <Switch checked={value} onCheckedChange={onChange} aria-label={label} />
     </SettingRow>
   );
 }

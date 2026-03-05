@@ -39,22 +39,26 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommi
             <span className="truncate max-w-[120px]">{file.name}</span>
             {isGitHub && onCommitFile && (
               <button
+                type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   onCommitFile(file.path);
                 }}
                 className="opacity-0 group-hover:opacity-100 hover:bg-ide-success/20 text-ide-success rounded p-0.5 transition-all duration-150"
+                aria-label={`Commit and push ${file.name}`}
                 title="Commit & Push"
               >
                 <Upload className="h-2.5 w-2.5" />
               </button>
             )}
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 onTabClose(file.path);
               }}
               className="opacity-0 group-hover:opacity-100 hover:bg-secondary rounded p-0.5 transition-all duration-150"
+              aria-label={`Close ${file.name} tab`}
             >
               <X className="h-2.5 w-2.5" />
             </button>

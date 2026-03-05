@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   DEFAULT_EDITOR_SETTINGS,
   type EditorSettings,
-} from "@/components/screens/SettingsScreen";
+} from "@/components/screens/settings.types";
 
 describe("EditorSettings", () => {
   describe("DEFAULT_EDITOR_SETTINGS", () => {

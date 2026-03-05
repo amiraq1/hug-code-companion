@@ -2,9 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import {
   SettingsScreen,
-  DEFAULT_EDITOR_SETTINGS,
-  type EditorSettings,
 } from "@/components/screens/SettingsScreen";
+import { DEFAULT_EDITOR_SETTINGS } from "@/components/screens/settings.types";
 
 // Mock useGitHub
 vi.mock("@/hooks/useGitHub", () => ({
