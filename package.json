@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:hybrid": "node scripts/hybrid-gated-check.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",

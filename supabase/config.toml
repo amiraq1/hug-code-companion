@@ -4,10 +4,10 @@ project_id = "kmuksmcyzamxtzzkocjr"
 verify_jwt = false
 
 [functions.github-api]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-plan]
-verify_jwt = true
+verify_jwt = false
 
 [functions.code-assist]
-verify_jwt = true
+verify_jwt = false

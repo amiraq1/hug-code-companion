@@ -132,6 +132,20 @@ export function useGitHub() {
   const [loading, setLoading] = useState(true);
   const online = useOnlineStatus();
   const sessionId = getSessionId();
+  const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+  const getFunctionHeaders = useCallback((): HeadersInit => {
+    const headers: Record<string, string> = {};
+    if (publishableKey) {
+      headers.apikey = publishableKey;
+      // Supabase publishable keys (sb_publishable_*) are not JWTs.
+      // Only send Authorization when the key looks like a JWT.
+      if (publishableKey.startsWith("eyJ")) {
+        headers.Authorization = `Bearer ${publishableKey}`;
+      }
+    }
+    return headers;
+  }, [publishableKey]);
 
   const checkStatus = useCallback(async () => {
     if (!navigator.onLine) {
@@ -143,39 +157,47 @@ export function useGitHub() {
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`,
         {
-          headers: {
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers: getFunctionHeaders(),
         }
       );
+      if (!res.ok) {
+        throw new Error(`Status check failed (${res.status})`);
+      }
       const statusData = await res.json();
-      setConnected(statusData.connected);
-      setUsername(statusData.username);
+      const isConnected = Boolean(statusData?.connected && statusData?.username);
+      setConnected(isConnected);
+      setUsername(isConnected ? statusData.username : null);
     } catch {
       setConnected(false);
+      setUsername(null);
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, getFunctionHeaders]);
 
   useEffect(() => {
-    checkStatus();
-    const params = new URLSearchParams(window.location.search);
-    const csrfToken = params.get("csrf_token");
+    const initialize = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const csrfToken = params.get("csrf_token");
+      const githubConnected = params.get("github_connected") === "true";
 
-    if (params.get("github_connected") === "true") {
-      if (csrfToken && !validateAndConsumeCsrf(csrfToken)) {
-        setConnected(false);
-        setUsername(null);
-        setLoading(false);
+      if (githubConnected) {
+        if (csrfToken && !validateAndConsumeCsrf(csrfToken)) {
+          setConnected(false);
+          setUsername(null);
+          setLoading(false);
+          window.history.replaceState({}, "", window.location.pathname);
+          return;
+        }
+        // Do not optimistically mark connected from URL params.
+        // Confirm from backend first to avoid false-positive 401 calls.
         window.history.replaceState({}, "", window.location.pathname);
-        return;
       }
-      setConnected(true);
-      setUsername(params.get("github_username"));
-      window.history.replaceState({}, "", window.location.pathname);
-    }
+
+      await checkStatus();
+    };
+
+    void initialize();
   }, [checkStatus]);
 
   const connect = useCallback(() => {
@@ -191,14 +213,13 @@ export function useGitHub() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        ...getFunctionHeaders(),
       },
       body: JSON.stringify({ session_id: sessionId }),
     });
     setConnected(false);
     setUsername(null);
-  }, [sessionId]);
+  }, [sessionId, getFunctionHeaders]);
 
   const apiCall = useCallback(
     async (action: string, params: Record<string, unknown> = {}) => {
@@ -214,15 +235,18 @@ export function useGitHub() {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              ...getFunctionHeaders(),
             },
             body: JSON.stringify({ session_id: sessionId, action, ...params }),
           }
         );
 
         if (!res.ok) {
-          if (res.status === 401) throw new GitHubError("Authentication expired. Please reconnect GitHub.", "auth", 401);
+          if (res.status === 401) {
+            setConnected(false);
+            setUsername(null);
+            throw new GitHubError("Authentication expired. Please reconnect GitHub.", "auth", 401);
+          }
           if (res.status === 403) throw new GitHubError("API rate limit exceeded. Try again later.", "rate_limit", 403);
           if (res.status === 404) throw new GitHubError("Resource not found.", "not_found", 404);
           if (res.status >= 500) throw new GitHubError("Server error. Please try again.", "server", res.status);
@@ -237,7 +261,7 @@ export function useGitHub() {
         return data;
       });
     },
-    [sessionId]
+    [sessionId, getFunctionHeaders]
   );
 
   const listRepos = useCallback(() => apiCall("list_repos") as Promise<GitHubRepo[]>, [apiCall]);

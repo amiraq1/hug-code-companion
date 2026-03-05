@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, memo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseFunctionHeaders } from "@/integrations/supabase/functionHeaders";
 import {
   ArrowLeft,
   Sparkles,
@@ -244,9 +245,7 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-plan", {
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: getSupabaseFunctionHeaders(),
         body: { type: "generate", description, session_id: sessionId },
       });
       if (error) throw error;
@@ -272,9 +271,7 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
     setAnalyzing(task.id);
     try {
       const { data, error } = await supabase.functions.invoke("generate-plan", {
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: getSupabaseFunctionHeaders(),
         body: {
           type: "analyze",
           session_id: sessionId,

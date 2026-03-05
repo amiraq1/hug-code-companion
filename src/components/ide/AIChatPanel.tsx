@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Bot, User, Sparkles, Loader2, Square, ClipboardPaste, Check, FilePlus, Replace } from "lucide-react";
 import type { ChatMessage } from "@/stores/editorStore";
 import type { FileNode } from "@/stores/editorStore";
+import { getSupabaseFunctionHeaders } from "@/integrations/supabase/functionHeaders";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 
@@ -163,10 +164,7 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
 
       const resp = await fetch(CODE_ASSIST_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: getSupabaseFunctionHeaders("application/json"),
         body: JSON.stringify({
           messages: apiMessages,
           project_context: projectContext || null,
