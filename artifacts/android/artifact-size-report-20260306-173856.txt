@@ -1,0 +1,5 @@
+Android Artifact Size Report
+Generated: Fri Mar 06 17:38:52 AST 2026
+
+app\build\outputs\bundle\prodRelease\app-prod-release.aab                                        ٣٫٣١ MB
+app\build\outputs\apk\prod\release\app-prod-release.apk                                          ٢٫٥١ MB
