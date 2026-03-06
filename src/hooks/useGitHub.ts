@@ -81,6 +81,22 @@ export interface GitHubContent {
   encoding?: string;
 }
 
+export interface GitHubTreeItem {
+  path: string;
+  mode: string;
+  type: "blob" | "tree";
+  sha: string;
+  size?: number;
+  url: string;
+}
+
+export interface GitHubTree {
+  sha: string;
+  url: string;
+  tree: GitHubTreeItem[];
+  truncated: boolean;
+}
+
 /** Error types for structured error handling */
 export type GitHubErrorType = "network" | "auth" | "rate_limit" | "not_found" | "server" | "unknown";
 
@@ -360,6 +376,12 @@ export function useGitHub() {
     [apiCall]
   );
 
+  const getTree = useCallback(
+    (owner: string, repo: string, branch?: string) =>
+      apiCall("get_tree", { owner, repo, branch }) as Promise<GitHubTree>,
+    [apiCall]
+  );
+
   return {
     connected,
     username,
@@ -381,5 +403,6 @@ export function useGitHub() {
     getCommitDiff,
     mergeBranch,
     pullStatus,
+    getTree,
   };
 }

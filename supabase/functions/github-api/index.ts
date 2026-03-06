@@ -18,10 +18,10 @@ const ALLOWED_ACTIONS = new Set([
   "get_status",
   "commit_file",
   "create_repo",
-  "compare_commits",
   "get_commit_diff",
   "merge_branch",
   "pull_status",
+  "get_tree",
 ]);
 
 function isValidUUID(str: string): boolean {
@@ -127,6 +127,16 @@ Deno.serve(async (req) => {
 
       case "list_branches": {
         const res = await githubFetch(token, `/repos/${params.owner}/${params.repo}/branches?per_page=100`);
+        result = await res.json();
+        break;
+      }
+
+      case "get_tree": {
+        const branch = params.branch || "main";
+        const res = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/git/trees/${branch}?recursive=1`
+        );
         result = await res.json();
         break;
       }

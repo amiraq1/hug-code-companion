@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, Bot, User, Sparkles, Loader2, Square, ClipboardPaste, Check, FilePlus, Replace } from "lucide-react";
 import type { ChatMessage } from "@/stores/editorStore";
 import type { FileNode } from "@/stores/editorStore";
 import { getSupabaseFunctionHeaders } from "@/integrations/supabase/functionHeaders";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { Components } from "react-markdown";
 import { toast } from "sonner";
 
 const CODE_ASSIST_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/code-assist`;
@@ -129,6 +129,34 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const markdownComponents: Components = useMemo(() => ({
+    code({ node, className, children, ...props }) {
+      const isBlock = className?.startsWith("language-");
+      const codeStr = String(children).replace(/\n$/, "");
+      if (!isBlock) {
+        return (
+          <code className={className} {...props}>
+            {children}
+          </code>
+        );
+      }
+
+      const metaString = (node?.data as any)?.meta || (node as any)?.meta || "";
+
+      return (
+        <div className="not-prose relative mt-4 mb-4">
+          <CodeBlockWithInsert
+            code={codeStr}
+            className={className}
+            meta={metaString}
+            onInsert={onInsertCode}
+            onCreateFile={onCreateFile}
+          />
+        </div>
+      );
+    }
+  }), [onInsertCode, onCreateFile]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -173,8 +201,18 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
       });
 
       if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "خطأ في الاتصال" }));
-        onStreamMessage(assistantId, `⚠️ ${err.error || "حدث خطأ"}`, true);
+        const err = await resp.json().catch(() => ({ error: "خطأ في الاتصال بالخادم" }));
+        let errorMessage = err.error || "حدث خطأ غير متوقع";
+        
+        if (errorMessage.includes("AI gateway error (403)") || errorMessage.includes("API_KEY")) {
+          errorMessage = "❌ فشل المصادقة: حدث خطأ في مفتاح `NVIDIA_API_KEY`. تأكد من صحة المفتاح وإعدادات Supabase.";
+        } else if (errorMessage.includes("402") || errorMessage.includes("رصيد")) {
+          errorMessage = "💳 رصيد واجهة برمجة التطبيقات (API) نفد. يرجى الشحن.";
+        } else {
+          errorMessage = `⚠️ ${errorMessage}`;
+        }
+
+        onStreamMessage(assistantId, errorMessage, true);
         setIsStreaming(false);
         return;
       }
@@ -289,31 +327,7 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
               {msg.role === "assistant" ? (
                 <div className="prose prose-sm prose-invert max-w-none [&_p]:m-0 [&_pre]:bg-background/80 [&_pre]:p-2.5 [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_code]:text-primary/80 [&_code]:text-[11px] [&_code]:font-mono">
                   <ReactMarkdown
-                    components={{
-                      pre({ children }) {
-                        return <pre className="relative group">{children}</pre>;
-                      },
-                      code({ node, className, children, ...props }) {
-                        const isBlock = className?.startsWith("language-");
-                        const codeStr = String(children).replace(/\n$/, "");
-                        if (!isBlock) {
-                          return <code className={className} {...props}>{children}</code>;
-                        }
-
-                        // Try to safely access meta string
-                        const metaString = (node?.data as any)?.meta || (node as any)?.meta || "";
-
-                        return (
-                          <CodeBlockWithInsert
-                            code={codeStr}
-                            className={className}
-                            meta={metaString}
-                            onInsert={onInsertCode}
-                            onCreateFile={onCreateFile}
-                          />
-                        );
-                      }
-                    }}
+                    components={markdownComponents}
                   >
                     {msg.content}
                   </ReactMarkdown>

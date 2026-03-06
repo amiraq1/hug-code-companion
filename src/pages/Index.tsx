@@ -498,6 +498,7 @@ const Index = () => {
             <div className="fixed inset-0 z-[60] bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
               <CommitDialog
                 filePath={commitDialogPath}
+                fileContent={flattenFiles(files).find(f => f.path === commitDialogPath)?.content || ""}
                 onCommit={handleCommitGitHubFile}
                 onClose={() => setCommitDialogPath(null)}
               />
@@ -674,6 +675,7 @@ const Index = () => {
       {commitDialogPath && (
         <CommitDialog
           filePath={commitDialogPath}
+          fileContent={flattenFiles(files).find(f => f.path === commitDialogPath)?.content || ""}
           onCommit={handleCommitGitHubFile}
           onClose={() => setCommitDialogPath(null)}
         />

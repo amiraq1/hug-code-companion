@@ -72,7 +72,11 @@ serve(async (req) => {
       });
     }
     const NVIDIA_API_KEY = Deno.env.get("NVIDIA_API_KEY");
-    if (!NVIDIA_API_KEY) throw new Error("NVIDIA_API_KEY is not configured");
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY");
+
+    if (!NVIDIA_API_KEY && !GROQ_API_KEY) {
+      throw new Error("لا يوجد مفتاح API صالح (NVIDIA أو GROQ)");
+    }
 
     // Build context-aware system prompt
     let systemContent = SYSTEM_PROMPT;
@@ -92,38 +96,71 @@ serve(async (req) => {
       }
     }
 
-    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${NVIDIA_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "meta/llama-3.1-70b-instruct",
-        messages: [
-          { role: "system", content: systemContent },
-          ...messages,
-        ],
-        stream: true,
-      }),
-    });
+    const payload = {
+      model: "meta/llama-3.1-70b-instruct",
+      messages: [
+        { role: "system", content: systemContent },
+        ...messages,
+      ],
+      stream: true,
+    };
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "تم تجاوز حد الطلبات، حاول لاحقاً" }), {
+    let response = null;
+    let primaryError = null;
+
+    // First attempt: Groq API (High Speed)
+    if (GROQ_API_KEY) {
+      const groqPayload = { ...payload, model: "llama-3.1-70b-versatile" };
+      response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(groqPayload),
+      });
+
+      if (!response.ok) {
+         const errText = await response.text();
+         console.error("Groq API Error:", response.status, errText);
+         primaryError = { status: response.status, text: errText, source: "Groq" };
+         response = null; // Mark failed to trigger fallback
+      }
+    }
+
+    // Second Attempt fallback: NVIDIA API
+    if (!response && NVIDIA_API_KEY) {
+      if (primaryError) console.log("Switching to Fallback Node (NVIDIA)...");
+      response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${NVIDIA_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+         const t = await response.text();
+         throw new Error(`NVIDIA API Error (${response.status}): ${t}`);
+      }
+    }
+
+    // If both failed (No generic response object initialized)
+    if (!response) {
+      if (primaryError?.status === 429) {
+        return new Response(JSON.stringify({ error: "تم تجاوز حد الطلبات من المزود الرئيسي للذكاء الاصطناعي، يرجى المحاولة لاحقاً" }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "يرجى إضافة رصيد للاستمرار" }), {
+      if (primaryError?.status === 402) {
+        return new Response(JSON.stringify({ error: "الرصيد نفد والمحول الاحتياطي غير متاح" }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      throw new Error(`AI gateway error (${response.status}): ${t}`);
+      throw new Error(`AI gateway error (${primaryError?.status || 500}): ${primaryError?.text}`);
     }
 
     return new Response(response.body, {

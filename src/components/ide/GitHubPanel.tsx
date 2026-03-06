@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Lock,
   Globe,
+  Sparkles,
 } from "lucide-react";
 import { useGitHub, type GitHubRepo, type GitHubContent } from "@/hooks/useGitHub";
 
@@ -40,7 +41,60 @@ export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
   const [commitFilePath, setCommitFilePath] = useState("");
   const [commitContent, setCommitContent] = useState("");
   const [committing, setCommitting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [view, setView] = useState<"repos" | "browser" | "commit">("repos");
+
+  const handleAutoGenerate = async () => {
+    if (!commitContent) return;
+    setGenerating(true);
+    let fullMessage = "";
+    setCommitMsg("");
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
+      const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (publishableKey) {
+        headers.apikey = publishableKey;
+        if (publishableKey.startsWith("eyJ")) headers.Authorization = `Bearer ${publishableKey}`;
+      }
+      
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/code-assist`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          messages: [{
+            role: "user",
+            content: `You are a Git expert. Write a concise, professional Conventional Commit message (max 50 chars) for the following code update. Output ONLY the message text without quotes or explanation:\n\n${commitContent.substring(0, 5000)}`
+          }]
+        }),
+      });
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+          for (const line of lines) {
+            if (line.startsWith("data: ") && line !== "data: [DONE]") {
+              try {
+                const data = JSON.parse(line.slice(6));
+                fullMessage += data.choices[0]?.delta?.content || "";
+                setCommitMsg(fullMessage.trim().replace(/^["']|["']$/g, ""));
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Auto-generate failed", e);
+    } finally {
+      setGenerating(false);
+      setCommitMsg(fullMessage.trim().replace(/^["']|["']$/g, ""));
+    }
+  };
 
   const loadRepos = useCallback(async () => {
     setLoading(true);
@@ -316,9 +370,22 @@ export function GitHubPanel({ onFileOpen }: GitHubPanelProps) {
               />
             </div>
             <div>
-              <label className="text-[11px] text-muted-foreground uppercase tracking-wider mb-1 block">
-                Commit Message
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] text-muted-foreground uppercase tracking-wider block">
+                  Commit Message
+                </label>
+                {commitContent && (
+                  <button
+                    type="button"
+                    onClick={handleAutoGenerate}
+                    disabled={generating}
+                    className="text-[10px] text-primary/80 hover:text-primary flex items-center gap-1 transition-colors disabled:opacity-50"
+                  >
+                    {generating ? <Loader2 className="h-3 w-3 animate-spin text-primary" /> : <Sparkles className="h-3 w-3 text-primary" />}
+                    Auto Generate
+                  </button>
+                )}
+              </div>
               <input
                 value={commitMsg}
                 onChange={(e) => setCommitMsg(e.target.value)}
