@@ -410,6 +410,7 @@ const Index = () => {
       const allCurrent = flattenFiles(files);
       const file = allCurrent.find((f) => f.path === commitDialogPath);
       if (!file?.content) return;
+      console.log(`[GitHub Commit] Attempting commit to ${owner}/${repo} at ${filePath}`);
       await commitFile(owner, repo, filePath, file.content, message);
       setCommitDialogPath(null);
     },

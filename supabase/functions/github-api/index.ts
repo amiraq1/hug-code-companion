@@ -46,6 +46,7 @@ async function getToken(sessionId: string): Promise<string | null> {
 }
 
 async function githubFetch(token: string, endpoint: string, options: RequestInit = {}) {
+  console.log(`[GitHub API] ${options.method || 'GET'} ${endpoint}`);
   const res = await fetch(`https://api.github.com${endpoint}`, {
     ...options,
     headers: {
@@ -55,6 +56,7 @@ async function githubFetch(token: string, endpoint: string, options: RequestInit
       ...((options.headers as Record<string, string>) || {}),
     },
   });
+  console.log(`[GitHub API] Response: ${res.status}`);
   return res;
 }
 
@@ -66,6 +68,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { session_id, action, ...params } = body;
+    console.log(`[Action] ${action}`, params);
 
     if (!session_id || !isValidUUID(session_id)) {
       return new Response(JSON.stringify({ error: "session_id required" }), {

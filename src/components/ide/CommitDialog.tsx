@@ -120,7 +120,11 @@ export function CommitDialog({ filePath, fileContent, onCommit, onClose }: Commi
                   disabled={generating}
                   className="text-[10px] text-primary/80 hover:text-primary flex items-center gap-1 transition-colors disabled:opacity-50 font-medium"
                 >
-                  {generating ? <Loader2 className="h-3 w-3 animate-spin text-primary" /> : <Sparkles className="h-3 w-3 text-primary" />}
+                  {generating ? (
+                    <Loader2 key="generating-icon" className="h-3 w-3 animate-spin text-primary" />
+                  ) : (
+                    <Sparkles key="sparkles-icon" className="h-3 w-3 text-primary" />
+                  )}
                   Generate AI Commit
                 </button>
               )}
@@ -149,7 +153,11 @@ export function CommitDialog({ filePath, fileContent, onCommit, onClose }: Commi
             disabled={committing || !message.trim()}
             className="px-5 py-2 bg-ide-success text-primary-foreground rounded-lg text-[12px] font-medium hover:opacity-90 disabled:opacity-20 transition-all duration-200 flex items-center gap-2"
           >
-            {committing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {committing ? (
+              <Loader2 key="pushing-icon" className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload key="upload-icon" className="h-3.5 w-3.5" />
+            )}
             {committing ? "Pushing..." : "Push"}
           </button>
         </div>
