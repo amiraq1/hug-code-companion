@@ -1,11 +1,11 @@
 {
   "policy": "hybrid-gated-v1",
-  "generatedAt": "2026-03-05T20:52:40.025Z",
+  "generatedAt": "2026-03-09T12:12:32.799Z",
   "inputs": {
-    "pageInput": "https://www.notion.so/ac9fbc12a1e14db6864d4764aef22f8f",
-    "pageId": "ac9fbc12-a1e1-4db6-864d-4764aef22f8f",
-    "pageUrl": "https://www.notion.so/ac9fbc12a1e14db6864d4764aef22f8f",
-    "browserUrl": "https://www.notion.so/ac9fbc12a1e14db6864d4764aef22f8f",
+    "pageInput": null,
+    "pageId": null,
+    "pageUrl": null,
+    "browserUrl": null,
     "browserMode": "fetch",
     "browserRequired": false,
     "apiSkipped": false
@@ -22,18 +22,17 @@
       "details": {}
     },
     "browser": {
-      "attempted": true,
-      "status": "pass",
-      "success": true,
+      "attempted": false,
+      "status": "skip",
+      "success": false,
       "criticalErrors": [],
       "nonCriticalErrors": [],
-      "warnings": [],
+      "warnings": [
+        "No browser URL provided."
+      ],
       "details": {
         "mode": "fetch",
-        "pageUrl": "https://www.notion.so/ac9fbc12a1e14db6864d4764aef22f8f",
-        "httpStatus": 200,
-        "finalUrl": "https://www.notion.so/ac9fbc12a1e14db6864d4764aef22f8f",
-        "pageTitle": "Notion"
+        "pageUrl": null
       }
     }
   },
@@ -42,7 +41,9 @@
       "NOTION_API_KEY is not set."
     ],
     "non_critical_errors": [],
-    "warnings": []
+    "warnings": [
+      "No browser URL provided."
+    ]
   },
   "finalStatus": "FAIL"
 }

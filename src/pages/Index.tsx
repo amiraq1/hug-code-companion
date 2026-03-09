@@ -34,6 +34,7 @@ const SettingsScreen = lazy(() => import("@/components/screens/SettingsScreen").
 const AIProjectPlanner = lazy(() => import("@/components/screens/AIProjectPlanner").then(m => ({ default: m.AIProjectPlanner })));
 const DashboardScreen = lazy(() => import("@/components/screens/DashboardScreen").then(m => ({ default: m.DashboardScreen })));
 const ProfileScreen = lazy(() => import("@/components/screens/ProfileScreen").then(m => ({ default: m.ProfileScreen })));
+const LandingScreen = lazy(() => import("@/components/screens/LandingScreen").then(m => ({ default: m.LandingScreen })));
 
 const LazyFallback = () => (
   <div className="flex-1 flex items-center justify-center bg-ide-editor">
@@ -47,7 +48,7 @@ const ScreenFallback = () => (
   </div>
 );
 
-type AppScreen = "login" | "repos" | "editor" | "settings" | "ai-planner" | "dashboard" | "profile";
+type AppScreen = "landing" | "login" | "repos" | "editor" | "settings" | "ai-planner" | "dashboard" | "profile";
 type MobileTab = "files" | "editor" | "preview" | "chat" | "git";
 const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
 
@@ -59,7 +60,7 @@ const Index = () => {
   const isMobile = useIsMobile();
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPending, startFileTransition] = useTransition();
-  const [screen, setScreen] = useState<AppScreen>("login");
+  const [screen, setScreen] = useState<AppScreen>("landing");
   const [files, setFiles] = useState<FileNode[]>(DEFAULT_FILES);
   const [activeFilePath, setActiveFilePath] = useState<string | null>("src/App.tsx");
   const [openFilePaths, setOpenFilePaths] = useState<string[]>(["src/App.tsx"]);
@@ -101,6 +102,63 @@ const Index = () => {
   const [selectedGitHubRepo, setSelectedGitHubRepo] = useState<GitHubRepo | null>(null);
   const [mobileTab, setMobileTab] = useState<MobileTab>("editor");
   const [slideDirection, setSlideDirection] = useState<SwipeDirection>(null);
+
+  const [editorErrors, setEditorErrors] = useState<{ path: string; errors: string[] }>({ path: "", errors: [] });
+  const [notifiedErrors, setNotifiedErrors] = useState<Set<string>>(new Set());
+
+  const handleValidateErrors = useCallback((path: string, errors: string[]) => {
+    setEditorErrors({ path, errors });
+  }, []);
+
+  useEffect(() => {
+    if (editorErrors.errors.length === 0 || !editorErrors.path) return;
+    
+    const timer = setTimeout(() => {
+      const errorFingerprint = `${editorErrors.path}:${editorErrors.errors[0]}`;
+      // Allow re-notifying if we cleared the set, but practically we hold it to avoid spam.
+      if (!notifiedErrors.has(errorFingerprint)) {
+        setNotifiedErrors(prev => new Set(prev).add(errorFingerprint));
+        setMessages((prev) => {
+          const lastMsg = prev[prev.length - 1];
+          if (lastMsg && lastMsg.role === "assistant" && lastMsg.content.includes("تنبيه استباقي")) {
+             return prev; 
+          }
+          return [...prev, {
+            id: Date.now().toString() + "-err",
+            role: "assistant",
+            content: `⚠️ **تنبيه استباقي (Proactive Watcher)**: لقد لاحظت وجود خطأ برمجي (Syntax/Type Error) في ملف \`${editorErrors.path}\`:\n\`\`\`text\n${editorErrors.errors[0]}\n\`\`\`\nهل ترغب أن أقوم بإصلاح هذا الخطأ فوراً باستخدام قدراتي البرمجية؟`,
+            timestamp: new Date()
+          }];
+        });
+      }
+    }, 4000); // 4 seconds delay to avoid typing noise
+    
+    return () => clearTimeout(timer);
+  }, [editorErrors, notifiedErrors]);
+
+  // Terminal & Server Error Watcher (Vite HMR Hook)
+  useEffect(() => {
+    // @ts-ignore
+    if (import.meta.hot) {
+      // @ts-ignore
+      import.meta.hot.on("vite:error", (payload: any) => {
+        const errorMsg = payload.err?.message || "Unknown System Error";
+        let errorPath = payload.err?.id || payload.err?.loc?.file || "Terminal";
+        // Clean up messy absolute paths to be readable
+        if (errorPath.includes("hug-code-companion")) {
+           errorPath = errorPath.split("hug-code-companion").pop();
+        }
+        const snippet = payload.err?.frame || "";
+        
+        const fullError = snippet ? `${errorMsg}\n\nCode snippet:\n${snippet}` : errorMsg;
+        
+        setEditorErrors({
+          path: `🖥️ Terminal: ${errorPath}`,
+          errors: [fullError]
+        });
+      });
+    }
+  }, []);
 
   const navigateTab = useCallback((direction: "left" | "right") => {
     setMobileTab(prev => {
@@ -276,6 +334,37 @@ const Index = () => {
     if (isMobile) setMobileTab("editor");
   }, [isMobile]);
 
+  const handleToolCall = useCallback(async (name: string, args: any) => {
+    if (name === "read_file") {
+      const file = flattenFiles(files).find((f) => f.path === args.path);
+      if (file) {
+        setOpenFilePaths((prev) => (prev.includes(args.path) ? prev : [...prev, args.path]));
+        setActiveFilePath(args.path);
+        setMessages((prev) => [...prev, {
+          id: Date.now().toString() + "-sys",
+          role: "assistant",
+          content: `✅ تم فتح وقراءة الملف \`${args.path}\`. أصبح الآن في السياق ويمكنك سؤالي عنه.`,
+          timestamp: new Date()
+        }]);
+      } else {
+        setMessages((prev) => [...prev, {
+          id: Date.now().toString() + "-sys",
+          role: "assistant",
+          content: `❌ تعذر قراءة الملف \`${args.path}\`. الملف غير موجود.`,
+          timestamp: new Date()
+        }]);
+      }
+    } else if (name === "write_file") {
+      handleCreateFile(args.path, args.content);
+      setMessages((prev) => [...prev, {
+        id: Date.now().toString() + "-sys",
+        role: "assistant",
+        content: `✅ تم تعديل/إنشاء الملف \`${args.path}\` بنجاح في محررك.`,
+        timestamp: new Date()
+      }]);
+    }
+  }, [files, handleCreateFile]);
+
   const handleGitHubFileOpen = useCallback(
     (path: string, content: string, language: string) => {
       const fileName = path.split("/").pop() || path;
@@ -348,6 +437,11 @@ const Index = () => {
   // Mobile routing uses Elite Native Stack
   if (isMobile) {
     const mobileScreens = {
+      landing: (
+        <Suspense fallback={<ScreenFallback />}>
+          <LandingScreen onEnter={() => setScreen("login")} />
+        </Suspense>
+      ),
       login: <LoginScreen onContinue={() => setScreen("editor")} />,
       repos: <ReposScreen onSelectRepo={handleSelectRepo} onBack={() => setScreen("editor")} />,
       settings: <SettingsScreen onBack={() => setScreen("editor")} editorSettings={editorSettings} onSettingsChange={setEditorSettings} />,
@@ -426,6 +520,7 @@ const Index = () => {
                           file={activeFile}
                           onContentChange={handleContentChange}
                           settings={editorSettings}
+                          onValidateErrors={handleValidateErrors}
                         />
                       )}
                     </Suspense>
@@ -446,7 +541,7 @@ const Index = () => {
               {mobileTab === "chat" && (
                 <div className="flex-1 flex flex-col min-h-0 bg-ide-editor/50 backdrop-blur-sm rounded-xl mx-2 mt-2 border border-white/5 shadow-2xl overflow-hidden">
                   <Suspense fallback={<LazyFallback />}>
-                    <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} />
+                    <AIChatPanel messages={messages} onSendMessage={handleSendMessage} onStreamMessage={handleStreamMessage} onInsertCode={handleInsertCode} projectContext={projectContext} onCreateFile={handleCreateFile} onToolCall={handleToolCall} />
                   </Suspense>
                 </div>
               )}
@@ -513,6 +608,14 @@ const Index = () => {
   }
 
   // Desktop Screen Router Layout
+  if (screen === "landing") {
+    return (
+      <Suspense fallback={<ScreenFallback />}>
+        <LandingScreen onEnter={() => setScreen("login")} />
+      </Suspense>
+    );
+  }
+
   if (screen === "login") {
     return <LoginScreen onContinue={() => setScreen("editor")} />;
   }
@@ -631,6 +734,7 @@ const Index = () => {
               file={activeFile}
               onContentChange={handleContentChange}
               settings={editorSettings}
+              onValidateErrors={handleValidateErrors}
             />
           </Suspense>
         </div>
@@ -654,6 +758,7 @@ const Index = () => {
                   onInsertCode={handleInsertCode}
                   projectContext={projectContext}
                   onCreateFile={handleCreateFile}
+                  onToolCall={handleToolCall}
                 />
               ) : rightPanel === "github" ? (
                 <GitHubPanel onFileOpen={handleGitHubFileOpen} />

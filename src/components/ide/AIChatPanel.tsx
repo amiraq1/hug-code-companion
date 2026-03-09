@@ -21,6 +21,7 @@ interface AIChatPanelProps {
   onInsertCode?: (code: string, replace?: boolean) => void;
   projectContext?: ProjectContext;
   onCreateFile?: (path: string, content: string) => void;
+  onToolCall?: (name: string, args: any) => Promise<string | void>;
 }
 
 interface CodeBlockProps {
@@ -123,9 +124,10 @@ function CodeBlockWithInsert({ code, className, meta, onInsert, onCreateFile }: 
   );
 }
 
-export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsertCode, projectContext, onCreateFile }: AIChatPanelProps) {
+export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsertCode, projectContext, onCreateFile, onToolCall }: AIChatPanelProps) {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [currentStep, setCurrentStep] = useState<number>(0);
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -154,6 +156,25 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
           />
         </div>
       );
+    },
+    p({ children }) {
+      const text = String(children);
+      if (text.includes("🛠️ جاري تنفيذ أداة")) {
+        return (
+          <div className="tool-executing glass-card p-3 my-3 rounded-lg border-primary/20 animate-fade-in relative overflow-hidden">
+             <div className="flex items-center gap-2 text-primary text-[11px] font-bold uppercase tracking-wider mb-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                Agent Action
+             </div>
+             <div className="text-[12px] opacity-90 leading-relaxed">{children}</div>
+             <div className="absolute bottom-0 left-0 h-[1px] bg-primary/40 w-full animate-shimmer" />
+          </div>
+        );
+      }
+      if (text.includes("⚠️ **تنبيه استباقي**")) {
+        return <div className="proactive-alert my-2">{children}</div>;
+      }
+      return <p className="m-0">{children}</p>;
     }
   }), [onInsertCode, onCreateFile]);
 
@@ -179,9 +200,13 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
 
     // Start streaming
     setIsStreaming(true);
+    setCurrentStep(1); // Analysis
     const controller = new AbortController();
     abortRef.current = controller;
     const assistantId = (Date.now() + 1).toString();
+
+    setTimeout(() => { if (isStreaming) setCurrentStep(2); }, 2000); // Coding
+    setTimeout(() => { if (isStreaming) setCurrentStep(3); }, 5000); // Polishing
 
     try {
       // Build messages for API (exclude the welcome message, only user/assistant pairs)
@@ -227,6 +252,8 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
       const decoder = new TextDecoder();
       let buffer = "";
       let accumulated = "";
+      let accumulatedToolCallName = "";
+      let accumulatedToolCallArgs = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -247,10 +274,17 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
 
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) {
-              accumulated += content;
+            const delta = parsed.choices?.[0]?.delta;
+            if (!delta) continue;
+            
+            if (delta.content) {
+              accumulated += delta.content;
               onStreamMessage(assistantId, accumulated, false);
+            }
+            if (delta.tool_calls?.[0]) {
+               const tc = delta.tool_calls[0];
+               if (tc.function?.name) accumulatedToolCallName += tc.function.name;
+               if (tc.function?.arguments) accumulatedToolCallArgs += tc.function.arguments;
             }
           } catch {
             buffer = line + "\n" + buffer;
@@ -269,21 +303,46 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
           if (jsonStr === "[DONE]") continue;
           try {
             const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (content) accumulated += content;
+            const delta = parsed.choices?.[0]?.delta;
+            if (delta?.content) accumulated += delta.content;
+            if (delta?.tool_calls?.[0]) {
+               const tc = delta.tool_calls[0];
+               if (tc.function?.name) accumulatedToolCallName += tc.function.name;
+               if (tc.function?.arguments) accumulatedToolCallArgs += tc.function.arguments;
+            }
           } catch {
             // Ignore parse error
           }
         }
       }
 
-      onStreamMessage(assistantId, accumulated || "...", true);
+      if (accumulatedToolCallName && accumulatedToolCallArgs && onToolCall) {
+        try {
+          const args = JSON.parse(accumulatedToolCallArgs);
+          const formattedArgs = JSON.stringify(args, null, 2);
+          const toolMessage = `🛠️ جاري تنفيذ أداة: **${accumulatedToolCallName}**\n\`\`\`json\n${formattedArgs}\n\`\`\``;
+          
+          if (!accumulated) {
+             onStreamMessage(assistantId, toolMessage, true);
+          } else {
+             onStreamMessage(assistantId, accumulated + "\n\n" + toolMessage, true);
+          }
+          
+          await onToolCall(accumulatedToolCallName, args);
+        } catch(err) {
+          console.error("Tool call parsing error", err);
+          onStreamMessage(assistantId, accumulated || "⚠️ خطأ في قراءة الأداة", true);
+        }
+      } else {
+        onStreamMessage(assistantId, accumulated || "...", true);
+      }
     } catch (e: unknown) {
       if ((e as Error).name !== "AbortError") {
         onStreamMessage(assistantId, `⚠️ خطأ: ${(e as Error).message}`, true);
       }
     } finally {
       setIsStreaming(false);
+      setCurrentStep(0);
       abortRef.current = null;
     }
   }, [input, isStreaming, messages, onSendMessage, onStreamMessage, projectContext]);
@@ -344,12 +403,23 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
           </div>
         ))}
         {isStreaming && messages[messages.length - 1]?.role === "user" && (
-          <div className="flex gap-2.5 animate-fade-in">
-            <div className="w-5 h-5 rounded bg-primary/10 flex items-center justify-center shrink-0 mt-1">
-              <Bot className="h-3 w-3 text-primary/70" />
+          <div className="flex flex-col gap-2 animate-fade-in">
+            <div className="flex gap-2.5">
+              <div className="w-5 h-5 rounded bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                <Bot className="h-3 w-3 text-primary/70" />
+              </div>
+              <div className="rounded-lg px-3 py-2.5 bg-secondary/60 flex items-center gap-3 min-w-[120px]">
+                <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+                <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest animate-pulse">
+                  {currentStep === 1 ? "Analyzing" : currentStep === 2 ? "Generating" : "Finalizing"}
+                </span>
+              </div>
             </div>
-            <div className="rounded-lg px-3 py-2.5 bg-secondary/60">
-              <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
+            
+            <div className="flex gap-1.5 ml-7">
+               {[1, 2, 3].map(s => (
+                 <div key={s} className={`h-0.5 w-6 rounded-full transition-colors duration-500 ${currentStep >= s ? "bg-primary" : "bg-white/10"}`} />
+               ))}
             </div>
           </div>
         )}

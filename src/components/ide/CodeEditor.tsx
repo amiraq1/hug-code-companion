@@ -8,6 +8,7 @@ interface CodeEditorProps {
   file: FileNode | null;
   onContentChange: (path: string, content: string) => void;
   settings?: EditorSettings;
+  onValidateErrors?: (path: string, errors: string[]) => void;
 }
 
 function getMonacoLanguage(lang?: string): string {
@@ -25,12 +26,22 @@ function getMonacoLanguage(lang?: string): string {
   }
 }
 
-export const CodeEditor = memo(function CodeEditor({ file, onContentChange, settings }: CodeEditorProps) {
+export const CodeEditor = memo(function CodeEditor({ file, onContentChange, settings, onValidateErrors }: CodeEditorProps) {
   const handleContentChange = useCallback((value?: string) => {
     if (file?.path) {
       onContentChange(file.path, value || "");
     }
   }, [file?.path, onContentChange]);
+
+  const handleValidate = useCallback((markers: any[]) => {
+    const errors = markers
+      .filter(m => m.severity >= 8) // 8 is Error severity in Monaco
+      .map(m => `سطر ${m.startLineNumber}: ${m.message}`);
+      
+    if (onValidateErrors) {
+      onValidateErrors(file?.path || "", errors);
+    }
+  }, [file?.path, onValidateErrors]);
 
   const editorOptions = useMemo(() => ({
     fontSize: settings?.fontSize ?? 13,
@@ -80,6 +91,7 @@ export const CodeEditor = memo(function CodeEditor({ file, onContentChange, sett
         language={getMonacoLanguage(file.language)}
         value={file.content || ""}
         onChange={handleContentChange}
+        onValidate={handleValidate}
         theme="vs-dark"
         options={editorOptions}
         loading={

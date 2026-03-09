@@ -96,12 +96,45 @@ serve(async (req) => {
       }
     }
 
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "read_file",
+          description: "اقرأ محتوى ملف موجود في المشروع. Use this to read files to understand the code.",
+          parameters: {
+            type: "object",
+            properties: {
+              path: { type: "string", description: "مسار الملف، مثلاً src/App.tsx" }
+            },
+            required: ["path"],
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "write_file",
+          description: "قم بإنشاء أو تحديث ملف في المشروع.",
+          parameters: {
+            type: "object",
+            properties: {
+              path: { type: "string", description: "مسار الملف، مثلاً src/components/New.tsx" },
+              content: { type: "string", description: "محتوى الملف بالكامل." }
+            },
+            required: ["path", "content"],
+          }
+        }
+      }
+    ];
+
     const payload = {
       model: "meta/llama-3.1-70b-instruct",
       messages: [
         { role: "system", content: systemContent },
         ...messages,
       ],
+      tools,
       stream: true,
     };
 
