@@ -110,9 +110,9 @@ const TaskCard = memo(({
                 title="تحليل المهمة (Deep Analysis)"
               >
                 {analyzing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                  <Loader2 key="loader-analyzing" className="h-3.5 w-3.5 animate-spin text-primary" />
                 ) : (
-                  <Search className="h-3.5 w-3.5" />
+                  <Search key="search-icon" className="h-3.5 w-3.5" />
                 )}
               </button>
             )}
@@ -122,7 +122,7 @@ const TaskCard = memo(({
                 className="p-1 rounded hover:bg-secondary/60 text-muted-foreground transition-colors"
                 title={isExpanded ? "طي" : "توسيع"}
               >
-                {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                {isExpanded ? <ChevronDown key="chevron-down" className="h-3.5 w-3.5" /> : <ChevronRight key="chevron-right" className="h-3.5 w-3.5" />}
               </button>
             )}
           </div>
@@ -402,15 +402,15 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
             className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
           >
             {loading ? (
-              <>
+              <span key="loading-state" className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 جاري توليد الخطة...
-              </>
+              </span>
             ) : (
-              <>
+              <span key="idle-state" className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
                 توليد خطة العمل
-              </>
+              </span>
             )}
           </button>
         </div>

@@ -680,7 +680,13 @@ const Index = () => {
       <Suspense fallback={<ScreenFallback />}>
         <AIProjectPlanner
           onBack={() => setScreen("editor")}
-          sessionId={localStorage.getItem("hugcode_session") || "default"}
+          sessionId={(() => {
+            const saved = localStorage.getItem("hugcode_session");
+            if (saved && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(saved)) return saved;
+            const newId = crypto.randomUUID();
+            localStorage.setItem("hugcode_session", newId);
+            return newId;
+          })()}
         />
       </Suspense>
     );
