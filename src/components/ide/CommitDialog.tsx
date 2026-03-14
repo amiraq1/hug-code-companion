@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Upload, X, Loader2, Github, Sparkles } from "lucide-react";
+import { getSupabaseFunctionHeaders } from "@/integrations/supabase/functionHeaders";
+import { readAssistantTextStream } from "@/lib/streamTextResponse";
 
 interface CommitDialogProps {
   filePath: string;
@@ -20,20 +22,12 @@ export function CommitDialog({ filePath, fileContent, onCommit, onClose }: Commi
   const handleAutoGenerate = async () => {
     if (!fileContent) return;
     setGenerating(true);
-    let fullMessage = "";
     setMessage(""); // Reset
     try {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
-      const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (publishableKey) {
-        headers.apikey = publishableKey;
-        if (publishableKey.startsWith("eyJ")) headers.Authorization = `Bearer ${publishableKey}`;
-      }
-      
       const res = await fetch(`https://${projectId}.supabase.co/functions/v1/code-assist`, {
         method: "POST",
-        headers,
+        headers: getSupabaseFunctionHeaders("application/json"),
         body: JSON.stringify({
           messages: [{
             role: "user",
@@ -42,30 +36,19 @@ export function CommitDialog({ filePath, fileContent, onCommit, onClose }: Commi
         }),
       });
 
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data: ") && line !== "data: [DONE]") {
-              try {
-                const data = JSON.parse(line.slice(6));
-                fullMessage += data.choices[0]?.delta?.content || "";
-                setMessage(fullMessage.trim().replace(/^["']|["']$/g, ""));
-              } catch {}
-            }
-          }
-        }
+      if (!res.ok) {
+        throw new Error(`Auto-generate failed (${res.status})`);
       }
+
+      const fullMessage = await readAssistantTextStream(res, (streamText) => {
+        setMessage(streamText.replace(/^["']|["']$/g, ""));
+      });
+
+      setMessage(fullMessage.replace(/^["']|["']$/g, ""));
     } catch (e) {
       console.error("Auto-generate failed", e);
     } finally {
       setGenerating(false);
-      setMessage(fullMessage.trim().replace(/^["']|["']$/g, ""));
     }
   };
 

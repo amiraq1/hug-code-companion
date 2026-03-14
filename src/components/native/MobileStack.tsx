@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ReactNode, memo } from 'react';
+import React, { Suspense, useState, useEffect, ReactNode, memo } from 'react';
 
 export interface MobileStackProps {
     activeScreen: string;
@@ -83,7 +83,15 @@ export const MobileStack = memo(({ activeScreen, screens, onBack }: MobileStackP
                             transition: isTransitioning ? 'none' : 'transform 0s, opacity 0s'
                         }}
                     >
-                        {Content}
+                        <Suspense
+                            fallback={
+                                <div className="absolute inset-0 flex items-center justify-center bg-background">
+                                    <div className="h-6 w-6 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+                                </div>
+                            }
+                        >
+                            {Content}
+                        </Suspense>
                     </div>
                 );
             })}

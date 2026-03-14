@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, lazy, Suspense, useEffect, useTransition, startTransition } from "react";
+import { useState, useCallback, useMemo, lazy, Suspense, useEffect, useTransition } from "react";
 import { FileExplorer } from "@/components/ide/FileExplorer";
 import { TabBar } from "@/components/ide/TabBar";
 import { StatusBar } from "@/components/ide/StatusBar";
@@ -54,10 +54,12 @@ const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
 
 import { MobileStack } from "@/components/native/MobileStack";
 import { AsyncStorage } from "@/lib/asyncStorage";
+import { getSessionId } from "@/lib/session";
 import { motion } from "framer-motion";
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const appSessionId = useMemo(() => getSessionId(), []);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isPending, startFileTransition] = useTransition();
   const [screen, setScreen] = useState<AppScreen>("landing");
@@ -138,10 +140,10 @@ const Index = () => {
 
   // Terminal & Server Error Watcher (Vite HMR Hook)
   useEffect(() => {
-    // @ts-ignore
-    if (import.meta.hot) {
-      // @ts-ignore
-      import.meta.hot.on("vite:error", (payload: any) => {
+    // @ts-expect-error Vite injects `import.meta.hot` only in HMR-enabled environments.
+    const hot = import.meta.hot;
+    if (hot) {
+      hot.on("vite:error", (payload: any) => {
         const errorMsg = payload.err?.message || "Unknown System Error";
         let errorPath = payload.err?.id || payload.err?.loc?.file || "Terminal";
         // Clean up messy absolute paths to be readable
@@ -446,7 +448,7 @@ const Index = () => {
       login: <LoginScreen onContinue={() => setScreen("editor")} />,
       repos: <ReposScreen onSelectRepo={handleSelectRepo} onBack={() => setScreen("editor")} />,
       settings: <SettingsScreen onBack={() => setScreen("editor")} editorSettings={editorSettings} onSettingsChange={setEditorSettings} />,
-      'ai-planner': <AIProjectPlanner onBack={() => setScreen("editor")} sessionId={localStorage.getItem("hugcode_session") || "default"} />,
+      'ai-planner': <AIProjectPlanner onBack={() => setScreen("editor")} sessionId={appSessionId} />,
       editor: (
         <div className="h-[100dvh] flex flex-col overflow-hidden bg-background grain-overlay relative">
           {/* Mobile Header - Glassmorphism & Minimalist */}
@@ -464,18 +466,24 @@ const Index = () => {
             <div className="flex items-center gap-1.5 bg-white/[0.03] rounded-full p-1 border border-white/5 shadow-inner">
               <button
                 onClick={() => setScreen("ai-planner")}
+                aria-label="Open AI planner"
+                title="AI Planner"
                 className="p-2 rounded-full hover:bg-primary/20 hover:text-primary transition-all duration-300 text-muted-foreground"
               >
                 <Sparkles className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setScreen("repos")}
+                aria-label="Open repositories"
+                title="Repositories"
                 className="p-2 rounded-full hover:bg-white/10 hover:text-foreground transition-all duration-300 text-muted-foreground"
               >
                 <FolderGit2 className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setScreen("settings")}
+                aria-label="Open settings"
+                title="Settings"
                 className="p-2 rounded-full hover:bg-white/10 hover:text-foreground transition-all duration-300 text-muted-foreground"
               >
                 <Settings className="h-4 w-4" />
@@ -573,6 +581,8 @@ const Index = () => {
                 <button
                   key={id}
                   onClick={() => switchToTab(id)}
+                  aria-label={label}
+                  title={label}
                   className={`relative flex flex-col items-center justify-center w-14 h-12 rounded-xl transition-all duration-500 ease-out group ${isActive
                     ? "bg-primary/10 text-primary shadow-inner scale-105"
                     : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
@@ -680,13 +690,7 @@ const Index = () => {
       <Suspense fallback={<ScreenFallback />}>
         <AIProjectPlanner
           onBack={() => setScreen("editor")}
-          sessionId={(() => {
-            const saved = localStorage.getItem("hugcode_session");
-            if (saved && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(saved)) return saved;
-            const newId = crypto.randomUUID();
-            localStorage.setItem("hugcode_session", newId);
-            return newId;
-          })()}
+          sessionId={appSessionId}
         />
       </Suspense>
     );

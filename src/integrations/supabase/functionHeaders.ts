@@ -1,6 +1,9 @@
+import { getSessionId } from "@/lib/session";
+
 export function getSupabaseFunctionHeaders(contentType?: string): Record<string, string> {
   const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
   const headers: Record<string, string> = {};
+  headers["x-session-id"] = getSessionId();
 
   if (contentType) {
     headers["Content-Type"] = contentType;

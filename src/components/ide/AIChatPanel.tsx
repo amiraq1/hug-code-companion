@@ -130,6 +130,15 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
   const [currentStep, setCurrentStep] = useState<number>(0);
   const abortRef = useRef<AbortController | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const streamActiveRef = useRef(false);
+  const stepTimersRef = useRef<number[]>([]);
+
+  const clearStepTimers = useCallback(() => {
+    for (const timer of stepTimersRef.current) {
+      window.clearTimeout(timer);
+    }
+    stepTimersRef.current = [];
+  }, []);
 
   const markdownComponents: Components = useMemo(() => ({
     code({ node, className, children, ...props }) {
@@ -182,11 +191,16 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => clearStepTimers, [clearStepTimers]);
+
   const handleStop = useCallback(() => {
+    streamActiveRef.current = false;
+    clearStepTimers();
     abortRef.current?.abort();
     abortRef.current = null;
     setIsStreaming(false);
-  }, []);
+    setCurrentStep(0);
+  }, [clearStepTimers]);
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -201,12 +215,20 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
     // Start streaming
     setIsStreaming(true);
     setCurrentStep(1); // Analysis
+    streamActiveRef.current = true;
+    clearStepTimers();
     const controller = new AbortController();
     abortRef.current = controller;
     const assistantId = (Date.now() + 1).toString();
 
-    setTimeout(() => { if (isStreaming) setCurrentStep(2); }, 2000); // Coding
-    setTimeout(() => { if (isStreaming) setCurrentStep(3); }, 5000); // Polishing
+    stepTimersRef.current = [
+      window.setTimeout(() => {
+        if (streamActiveRef.current) setCurrentStep(2);
+      }, 2000),
+      window.setTimeout(() => {
+        if (streamActiveRef.current) setCurrentStep(3);
+      }, 5000),
+    ];
 
     try {
       // Build messages for API (exclude the welcome message, only user/assistant pairs)
@@ -341,11 +363,13 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
         onStreamMessage(assistantId, `⚠️ خطأ: ${(e as Error).message}`, true);
       }
     } finally {
+      streamActiveRef.current = false;
+      clearStepTimers();
       setIsStreaming(false);
       setCurrentStep(0);
       abortRef.current = null;
     }
-  }, [input, isStreaming, messages, onSendMessage, onStreamMessage, projectContext]);
+  }, [clearStepTimers, input, isStreaming, messages, onSendMessage, onStreamMessage, onToolCall, projectContext]);
 
   return (
     <div className="h-full bg-ide-panel border-l border-border flex flex-col">

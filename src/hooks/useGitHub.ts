@@ -1,61 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { getSupabaseFunctionHeaders } from "@/integrations/supabase/functionHeaders";
+import { getSessionId, getStoredValue, removeStoredValue, setStoredValue } from "@/lib/session";
 
-const SESSION_KEY = "hc_session_id";
 const CSRF_KEY = "hc_oauth_csrf";
-
-function encode(value: string): string {
-  return btoa(encodeURIComponent(value).split("").reverse().join(""));
-}
-
-function decode(value: string): string {
-  try {
-    return decodeURIComponent(atob(value).split("").reverse().join(""));
-  } catch {
-    return "";
-  }
-}
-
-function getSecureItem(key: string): string | null {
-  const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
-  if (!raw) return null;
-  const decoded = decode(raw);
-  return decoded || null;
-}
-
-function setSecureItem(key: string, value: string, persistent = false): void {
-  const encoded = encode(value);
-  if (persistent) {
-    localStorage.setItem(key, encoded);
-    return;
-  }
-  sessionStorage.setItem(key, encoded);
-}
-
-function removeSecureItem(key: string): void {
-  sessionStorage.removeItem(key);
-  localStorage.removeItem(key);
-}
-
-/** Get session ID from auth store's secure storage */
-function getSessionId(): string {
-  const existing = getSecureItem(SESSION_KEY);
-  if (existing) return existing;
-
-  // Fallback
-  const id = crypto.randomUUID();
-  setSecureItem(SESSION_KEY, id, true);
-  return id;
-}
 
 function generateCsrfToken(): string {
   const csrf = crypto.randomUUID();
-  setSecureItem(CSRF_KEY, csrf);
+  setStoredValue(CSRF_KEY, csrf);
   return csrf;
 }
 
 function validateAndConsumeCsrf(token: string): boolean {
-  const expected = getSecureItem(CSRF_KEY);
-  removeSecureItem(CSRF_KEY);
+  const expected = getStoredValue(CSRF_KEY);
+  removeStoredValue(CSRF_KEY);
   return expected === token;
 }
 
@@ -147,21 +104,7 @@ export function useGitHub() {
   const [username, setUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const online = useOnlineStatus();
-  const sessionId = getSessionId();
-  const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
-
-  const getFunctionHeaders = useCallback((): HeadersInit => {
-    const headers: Record<string, string> = {};
-    if (publishableKey) {
-      headers.apikey = publishableKey;
-      // Supabase publishable keys (sb_publishable_*) are not JWTs.
-      // Only send Authorization when the key looks like a JWT.
-      if (publishableKey.startsWith("eyJ")) {
-        headers.Authorization = `Bearer ${publishableKey}`;
-      }
-    }
-    return headers;
-  }, [publishableKey]);
+  const sessionId = useMemo(() => getSessionId(), []);
 
   const checkStatus = useCallback(async () => {
     if (!navigator.onLine) {
@@ -173,7 +116,7 @@ export function useGitHub() {
       const res = await fetch(
         `https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`,
         {
-          headers: getFunctionHeaders(),
+          headers: getSupabaseFunctionHeaders(),
         }
       );
       if (!res.ok) {
@@ -189,7 +132,7 @@ export function useGitHub() {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, getFunctionHeaders]);
+  }, [sessionId]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -225,17 +168,18 @@ export function useGitHub() {
 
   const disconnect = useCallback(async () => {
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
-    await fetch(`https://${projectId}.supabase.co/functions/v1/github-auth/disconnect`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getFunctionHeaders(),
-      },
-      body: JSON.stringify({ session_id: sessionId }),
-    });
-    setConnected(false);
-    setUsername(null);
-  }, [sessionId, getFunctionHeaders]);
+    try {
+      await fetch(`https://${projectId}.supabase.co/functions/v1/github-auth/disconnect`, {
+        method: "POST",
+        headers: getSupabaseFunctionHeaders("application/json"),
+        body: JSON.stringify({ session_id: sessionId }),
+      });
+    } finally {
+      removeStoredValue(CSRF_KEY);
+      setConnected(false);
+      setUsername(null);
+    }
+  }, [sessionId]);
 
   const apiCall = useCallback(
     async (action: string, params: Record<string, unknown> = {}) => {
@@ -249,10 +193,7 @@ export function useGitHub() {
           `https://${projectId}.supabase.co/functions/v1/github-api`,
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...getFunctionHeaders(),
-            },
+            headers: getSupabaseFunctionHeaders("application/json"),
             body: JSON.stringify({ session_id: sessionId, action, ...params }),
           }
         );
@@ -277,7 +218,7 @@ export function useGitHub() {
         return data;
       });
     },
-    [sessionId, getFunctionHeaders]
+    [sessionId]
   );
 
   const listRepos = useCallback(() => apiCall("list_repos") as Promise<GitHubRepo[]>, [apiCall]);

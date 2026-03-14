@@ -76,7 +76,7 @@ export function HeaderActions({
                 >
                     <Activity className="h-4 w-4" />
                 </button>
-                <NotificationHub />
+                <NotificationHub onOpenDashboard={() => onNavigate("dashboard")} />
                 <button
                     type="button"
                     onClick={() => onNavigate("profile")}
@@ -129,7 +129,7 @@ export function HeaderActions({
             >
                 <Activity className="h-3.5 w-3.5" />
             </button>
-            <NotificationHub />
+            <NotificationHub onOpenDashboard={() => onNavigate("dashboard")} />
             <button
                 type="button"
                 onClick={() => onNavigate("profile")}

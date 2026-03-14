@@ -2,9 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// Test the navigation flow by rendering Index and simulating screen changes
-// We mock heavy components to focus on navigation logic
-
 vi.mock("@/hooks/useGitHub", () => ({
   useGitHub: () => ({
     connected: false,
@@ -24,7 +21,13 @@ vi.mock("@/hooks/useGitHub", () => ({
     listCommits: vi.fn(),
     getStatus: vi.fn(),
   }),
-  GitHubError: class extends Error { type: string; constructor(m: string, t: string) { super(m); this.type = t; } },
+  GitHubError: class extends Error {
+    type: string;
+    constructor(message: string, type: string) {
+      super(message);
+      this.type = type;
+    }
+  },
 }));
 
 vi.mock("@/stores/authStore", () => ({
@@ -69,7 +72,6 @@ vi.mock("@/lib/asyncStorage", () => ({
   },
 }));
 
-// Import after mocks
 import Index from "@/pages/Index";
 
 function renderIndex() {
@@ -86,61 +88,89 @@ function renderIndex() {
   );
 }
 
-describe("App Navigation", () => {
-  it("starts on login screen", () => {
-    renderIndex();
-    expect(screen.getByText("مرحباً")).toBeInTheDocument();
-    expect(screen.getByText("تسجيل الدخول عبر GitHub")).toBeInTheDocument();
+async function goToLoginScreen() {
+  const enterButton = await screen.findByRole("button", { name: /enter studio/i });
+  fireEvent.click(enterButton);
+  await screen.findByText("AI-Powered Code Editor & GitHub IDE");
+}
+
+function clickContinueWithoutGitHub() {
+  const continueButton = screen.getAllByRole("button").find((button) => {
+    const label = button.textContent ?? "";
+    return label.includes("GitHub") && !button.querySelector("svg");
   });
 
-  it("navigates to editor when Continue without GitHub is clicked", () => {
+  if (!continueButton) {
+    throw new Error("Continue without GitHub button not found");
+  }
+
+  fireEvent.click(continueButton);
+}
+
+async function goToEditorScreen() {
+  await goToLoginScreen();
+  clickContinueWithoutGitHub();
+  await screen.findByText("Explorer");
+}
+
+describe("App Navigation", () => {
+  it("starts on landing screen then opens login screen", async () => {
     renderIndex();
-    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
-    // Should see editor elements
+    expect(await screen.findByRole("button", { name: /enter studio/i })).toBeInTheDocument();
+
+    await goToLoginScreen();
+    expect(screen.getByText("AI-Powered Code Editor & GitHub IDE")).toBeInTheDocument();
+  });
+
+  it("navigates to editor when Continue without GitHub is clicked", async () => {
+    renderIndex();
+    await goToEditorScreen();
     expect(screen.getByText("Explorer")).toBeInTheDocument();
   });
 
   it("shows settings screen when settings is clicked from editor", async () => {
     renderIndex();
-    // Go to editor first
-    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
-    // Click settings
+    await goToEditorScreen();
     fireEvent.click(screen.getByTitle("Settings"));
+
     expect(await screen.findByText("Settings")).toBeInTheDocument();
     expect(await screen.findByText("Font Size")).toBeInTheDocument();
   });
 
   it("returns to editor from settings", async () => {
     renderIndex();
-    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
+    await goToEditorScreen();
     fireEvent.click(screen.getByTitle("Settings"));
     await screen.findByText("Font Size");
-    // Click back
+
     const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]); // ArrowLeft button
+    fireEvent.click(buttons[0]);
+
     expect(await screen.findByText("Explorer")).toBeInTheDocument();
   });
 
   it("navigates to repos screen from editor", async () => {
     renderIndex();
-    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
+    await goToEditorScreen();
     fireEvent.click(screen.getByTitle("Repositories"));
+
     expect(await screen.findByText("/ repositories")).toBeInTheDocument();
   });
 
-  it("toggles sidebar visibility", () => {
+  it("toggles sidebar visibility", async () => {
     renderIndex();
-    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
+    await goToEditorScreen();
     expect(screen.getByText("Explorer")).toBeInTheDocument();
+
     fireEvent.click(screen.getByLabelText("Hide sidebar"));
     expect(screen.queryByText("Explorer")).not.toBeInTheDocument();
   });
 });
 
 describe("Editor Features", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     renderIndex();
-    fireEvent.click(screen.getByText("المتابعة بدون GitHub"));
+    await goToEditorScreen();
   });
 
   it("shows file tree with default files", () => {
@@ -151,9 +181,8 @@ describe("Editor Features", () => {
 
   it("opens a file tab when clicking a file", () => {
     fireEvent.click(screen.getByText("package.json"));
-    // Tab should appear
     const tabs = screen.getAllByText("package.json");
-    expect(tabs.length).toBeGreaterThanOrEqual(2); // one in tree, one in tab bar
+    expect(tabs.length).toBeGreaterThanOrEqual(2);
   });
 
   it("shows status bar with file info", () => {

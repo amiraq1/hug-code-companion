@@ -6,7 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
-export function NotificationHub() {
+interface NotificationHubProps {
+    onOpenDashboard: () => void;
+}
+
+export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
     const [unreadCount, setUnreadCount] = useState(0);
     const queryClient = useQueryClient();
 
@@ -165,10 +169,14 @@ export function NotificationHub() {
 
                 {/* Footer */}
                 <div className="p-3 bg-secondary/30 text-center border-t border-border">
-                    <a href="/dashboard" className="text-xs text-primary font-medium hover:underline flex items-center justify-center gap-1 group">
+                    <button
+                        type="button"
+                        onClick={onOpenDashboard}
+                        className="w-full text-xs text-primary font-medium hover:underline flex items-center justify-center gap-1 group"
+                    >
                         Open Command Center
                         <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </a>
+                    </button>
                 </div>
             </PopoverContent>
         </Popover>

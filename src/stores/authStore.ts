@@ -7,6 +7,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { getSupabaseFunctionHeaders } from "@/integrations/supabase/functionHeaders";
+import { getSessionId, getStoredValue, removeStoredValue, setStoredValue } from "@/lib/session";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -29,7 +31,6 @@ export interface AuthState {
 
 // ─── Secure Session Storage ──────────────────────────────────────────
 
-const SESSION_KEY = "hc_session_id";
 const CSRF_KEY = "hc_oauth_csrf";
 const AUTH_CACHE_KEY = "hc_auth_cache";
 
@@ -46,61 +47,17 @@ function createTimeoutSignal(ms: number): { signal: AbortSignal; clear: () => vo
   };
 }
 
-/** Simple obfuscation for session storage (not crypto-grade, but prevents casual reading) */
-function encode(value: string): string {
-  return btoa(encodeURIComponent(value).split("").reverse().join(""));
-}
-
-function decode(value: string): string {
-  try {
-    return decodeURIComponent(atob(value).split("").reverse().join(""));
-  } catch {
-    return "";
-  }
-}
-
-function getSecureItem(key: string): string | null {
-  const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
-  if (!raw) return null;
-  return decode(raw);
-}
-
-function setSecureItem(key: string, value: string, persistent = false): void {
-  const encoded = encode(value);
-  if (persistent) {
-    localStorage.setItem(key, encoded);
-  } else {
-    sessionStorage.setItem(key, encoded);
-  }
-}
-
-function removeSecureItem(key: string): void {
-  sessionStorage.removeItem(key);
-  localStorage.removeItem(key);
-}
-
-// ─── Session ID ──────────────────────────────────────────────────────
-
-function getSessionId(): string {
-  let id = getSecureItem(SESSION_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    setSecureItem(SESSION_KEY, id, true);
-  }
-  return id;
-}
-
 // ─── CSRF Protection ─────────────────────────────────────────────────
 
 function generateCsrfToken(): string {
   const token = crypto.randomUUID();
-  setSecureItem(CSRF_KEY, token);
+  setStoredValue(CSRF_KEY, token);
   return token;
 }
 
 function validateAndConsumeCsrf(token: string): boolean {
-  const stored = getSecureItem(CSRF_KEY);
-  removeSecureItem(CSRF_KEY);
+  const stored = getStoredValue(CSRF_KEY);
+  removeStoredValue(CSRF_KEY);
   return stored === token;
 }
 
@@ -114,12 +71,12 @@ interface AuthCache {
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 function getCachedAuth(): AuthCache | null {
-  const raw = getSecureItem(AUTH_CACHE_KEY);
+  const raw = getStoredValue(AUTH_CACHE_KEY);
   if (!raw) return null;
   try {
     const cache: AuthCache = JSON.parse(raw);
     if (Date.now() - cache.cachedAt > CACHE_TTL) {
-      removeSecureItem(AUTH_CACHE_KEY);
+      removeStoredValue(AUTH_CACHE_KEY);
       return null;
     }
     return cache;
@@ -129,11 +86,11 @@ function getCachedAuth(): AuthCache | null {
 }
 
 function setCachedAuth(username: string): void {
-  setSecureItem(AUTH_CACHE_KEY, JSON.stringify({ username, cachedAt: Date.now() }), true);
+  setStoredValue(AUTH_CACHE_KEY, JSON.stringify({ username, cachedAt: Date.now() }), true);
 }
 
 function clearCachedAuth(): void {
-  removeSecureItem(AUTH_CACHE_KEY);
+  removeStoredValue(AUTH_CACHE_KEY);
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────
@@ -181,7 +138,7 @@ export function useAuthStore() {
       let res: Response;
       try {
         res = await fetch(`https://${projectId}.supabase.co/functions/v1/github-auth/status?session_id=${sessionId}`, {
-          headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+          headers: getSupabaseFunctionHeaders(),
           signal: timeout.signal,
         });
       } finally {
@@ -271,10 +228,7 @@ export function useAuthStore() {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "placeholder-project";
       await fetch(`https://${projectId}.supabase.co/functions/v1/github-auth/disconnect`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
+        headers: getSupabaseFunctionHeaders("application/json"),
         body: JSON.stringify({ session_id: sessionId }),
       });
     } catch {
@@ -283,8 +237,8 @@ export function useAuthStore() {
 
     // Clear all auth data
     clearCachedAuth();
-    removeSecureItem(SESSION_KEY);
-    setState({ status: "unauthenticated", username: null, error: null, sessionId: getSessionId() });
+    removeStoredValue(CSRF_KEY);
+    setState({ status: "unauthenticated", username: null, error: null, sessionId });
   }, [sessionId]);
 
   // Clear error
