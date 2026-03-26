@@ -1,4 +1,5 @@
 const SESSION_KEY = "hc_session_id";
+const SESSION_PROOF_KEY = "hc_session_proof";
 const LEGACY_SESSION_KEY = "hugcode_session";
 
 function canUseStorage() {
@@ -22,6 +23,10 @@ export function isValidSessionId(value: string | null | undefined): value is str
     value &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
   );
+}
+
+export function isValidSessionProof(value: string | null | undefined): value is string {
+  return Boolean(value && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value));
 }
 
 export function getStoredValue(key: string): string | null {
@@ -88,4 +93,22 @@ export function persistSessionId(sessionId: string): string {
   return sessionId;
 }
 
-export { SESSION_KEY };
+export function getSessionProof(): string | null {
+  const proof = getStoredValue(SESSION_PROOF_KEY);
+  return isValidSessionProof(proof) ? proof : null;
+}
+
+export function persistSessionProof(proof: string): string {
+  if (!isValidSessionProof(proof)) {
+    throw new Error("Invalid session proof");
+  }
+
+  setStoredValue(SESSION_PROOF_KEY, proof, true);
+  return proof;
+}
+
+export function clearSessionProof(): void {
+  removeStoredValue(SESSION_PROOF_KEY);
+}
+
+export { SESSION_KEY, SESSION_PROOF_KEY };

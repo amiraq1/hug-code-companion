@@ -83,7 +83,7 @@ function CodeBlockWithInsert({ code, className, meta, onInsert, onCreateFile }: 
 
   return (
     <div className="relative group/block mt-2 mb-4">
-      <div className="absolute top-0 right-0 p-1 opacity-0 group-hover/block:opacity-100 transition-opacity duration-200 flex flex-col sm:flex-row items-end sm:items-center gap-1.5 z-10 m-1">
+      <div className="absolute top-0 right-0 z-10 m-1 flex flex-col items-end gap-1.5 p-1 opacity-100 transition-opacity duration-200 sm:flex-row sm:items-center sm:opacity-0 sm:group-hover/block:opacity-100">
         {onInsert && (
           <>
             <button
@@ -383,7 +383,7 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-4 sm:p-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4 px-6">
             <div className="w-10 h-10 rounded-lg bg-primary/8 flex items-center justify-center">
@@ -451,7 +451,7 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
       </div>
 
       {/* Input */}
-      <div className="p-3 border-t border-border">
+      <div className="p-2.5 border-t border-border sm:p-3">
         <div className="flex gap-2">
           <input
             type="text"
@@ -460,7 +460,7 @@ export function AIChatPanel({ messages, onSendMessage, onStreamMessage, onInsert
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="Ask anything..."
             disabled={isStreaming}
-            className="flex-1 bg-secondary/50 border border-border rounded-lg px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/20 transition-all duration-200 disabled:opacity-50"
+            className="min-h-[44px] flex-1 bg-secondary/50 border border-border rounded-lg px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 focus:border-primary/20 transition-all duration-200 disabled:opacity-50"
           />
           {isStreaming ? (
             <button

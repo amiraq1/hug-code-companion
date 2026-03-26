@@ -1,33 +1,62 @@
 import * as React from "react";
 
-const MOBILE_BREAKPOINT = 768;
+const COMPACT_MOBILE_BREAKPOINT = 430;
+const SHORT_MOBILE_HEIGHT = 820;
 
-export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined);
+type MobileViewportState = {
+  isCompactMobile: boolean;
+  isLandscapeMobile: boolean;
+  isShortMobileHeight: boolean;
+  prefersReducedMotion: boolean;
+};
+
+export function useMobileViewport() {
+  const [viewport, setViewport] = React.useState<MobileViewportState>({
+    isCompactMobile: false,
+    isLandscapeMobile: false,
+    isShortMobileHeight: false,
+    prefersReducedMotion: false,
+  });
 
   React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    const compactMql = window.matchMedia(`(max-width: ${COMPACT_MOBILE_BREAKPOINT}px)`);
+    const landscapeMql = window.matchMedia("(max-width: 767px) and (orientation: landscape)");
+    const shortHeightMql = window.matchMedia(`(max-width: 767px) and (max-height: ${SHORT_MOBILE_HEIGHT}px)`);
+    const reducedMotionMql = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+    const updateViewport = () => {
+      setViewport({
+        isCompactMobile: compactMql.matches,
+        isLandscapeMobile: landscapeMql.matches,
+        isShortMobileHeight: shortHeightMql.matches,
+        prefersReducedMotion: reducedMotionMql.matches,
+      });
     };
 
-    // WebView compatibility: older Android implementations still expose addListener/removeListener.
-    if (typeof mql.addEventListener === "function") {
-      mql.addEventListener("change", onChange);
-    } else if (typeof mql.addListener === "function") {
-      mql.addListener(onChange);
+    const listeners = [compactMql, landscapeMql, shortHeightMql, reducedMotionMql];
+
+    for (const mql of listeners) {
+      if (typeof mql.addEventListener === "function") {
+        mql.addEventListener("change", updateViewport);
+      } else if (typeof mql.addListener === "function") {
+        mql.addListener(updateViewport);
+      }
     }
 
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    window.addEventListener("orientationchange", updateViewport);
+    updateViewport();
 
     return () => {
-      if (typeof mql.removeEventListener === "function") {
-        mql.removeEventListener("change", onChange);
-      } else if (typeof mql.removeListener === "function") {
-        mql.removeListener(onChange);
+      for (const mql of listeners) {
+        if (typeof mql.removeEventListener === "function") {
+          mql.removeEventListener("change", updateViewport);
+        } else if (typeof mql.removeListener === "function") {
+          mql.removeListener(updateViewport);
+        }
       }
+      window.removeEventListener("orientationchange", updateViewport);
     };
   }, []);
 
-  return !!isMobile;
+  return viewport;
 }

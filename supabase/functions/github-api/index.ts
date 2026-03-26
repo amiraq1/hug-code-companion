@@ -1,10 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-session-id",
-};
+import {
+  createCorsHeaders,
+  isPublicWebOrigin,
+  readVerifiedSessionProof,
+} from "../_shared/sessionSecurity.ts";
 
 const ALLOWED_ACTIONS = new Set([
   "list_repos",
@@ -18,14 +17,15 @@ const ALLOWED_ACTIONS = new Set([
   "get_status",
   "commit_file",
   "create_repo",
+  "compare_commits",
   "get_commit_diff",
   "merge_branch",
   "pull_status",
   "get_tree",
 ]);
 
-function isValidUUID(str: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+function isValidUUID(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
 function toBase64Utf8(value: string): string {
@@ -37,17 +37,19 @@ async function getToken(sessionId: string): Promise<string | null> {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
+
   const { data } = await supabase
     .from("github_tokens")
     .select("access_token")
     .eq("session_id", sessionId)
     .single();
+
   return data?.access_token || null;
 }
 
 async function githubFetch(token: string, endpoint: string, options: RequestInit = {}) {
-  console.log(`[GitHub API] ${options.method || 'GET'} ${endpoint}`);
-  const res = await fetch(`https://api.github.com${endpoint}`, {
+  console.log(`[GitHub API] ${options.method || "GET"} ${endpoint}`);
+  const response = await fetch(`https://api.github.com${endpoint}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -56,54 +58,68 @@ async function githubFetch(token: string, endpoint: string, options: RequestInit
       ...((options.headers as Record<string, string>) || {}),
     },
   });
-  console.log(`[GitHub API] Response: ${res.status}`);
-  return res;
+
+  console.log(`[GitHub API] Response: ${response.status}`);
+  return response;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+function jsonResponse(body: unknown, status: number, headers: Record<string, string>) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (request) => {
+  const requestOrigin = request.headers.get("origin");
+  const preflightHeaders = createCorsHeaders(requestOrigin, Boolean(requestOrigin));
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: preflightHeaders });
   }
 
+  const stateSecret =
+    Deno.env.get("OAUTH_STATE_SECRET") || Deno.env.get("GITHUB_CLIENT_SECRET") || "fallback-secret";
+
   try {
-    const body = await req.json();
+    const body = await request.json();
     const { session_id, action, ...params } = body;
     console.log(`[Action] ${action}`, params);
 
-    if (!session_id || !isValidUUID(session_id)) {
-      return new Response(JSON.stringify({ error: "session_id required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!session_id || typeof session_id !== "string" || !isValidUUID(session_id)) {
+      return jsonResponse({ error: "session_id required" }, 400, preflightHeaders);
     }
 
     if (!action || typeof action !== "string" || !ALLOWED_ACTIONS.has(action)) {
-      return new Response(JSON.stringify({ error: "Unknown or blocked action" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Unknown or blocked action" }, 400, preflightHeaders);
     }
 
+    const proof = await readVerifiedSessionProof(request, stateSecret);
+    const originAllowed =
+      isPublicWebOrigin(requestOrigin) && proof?.app_origin === requestOrigin && proof.session_id === session_id;
+
+    if (!originAllowed) {
+      return jsonResponse({ error: "Unauthorized session proof" }, 401, preflightHeaders);
+    }
+
+    const responseHeaders = createCorsHeaders(requestOrigin, true);
     const token = await getToken(session_id);
     if (!token) {
-      return new Response(JSON.stringify({ error: "Not connected to GitHub" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Not connected to GitHub" }, 401, responseHeaders);
     }
 
     let result: unknown;
 
     switch (action) {
       case "list_repos": {
-        const res = await githubFetch(token, "/user/repos?sort=updated&per_page=30&type=all");
-        result = await res.json();
+        const response = await githubFetch(token, "/user/repos?sort=updated&per_page=30&type=all");
+        result = await response.json();
         break;
       }
 
       case "get_repo": {
-        const res = await githubFetch(token, `/repos/${params.owner}/${params.repo}`);
-        result = await res.json();
+        const response = await githubFetch(token, `/repos/${params.owner}/${params.repo}`);
+        result = await response.json();
         break;
       }
 
@@ -111,99 +127,99 @@ Deno.serve(async (req) => {
         const path = params.path || "";
         const ref = params.ref || "";
         const query = ref ? `?ref=${ref}` : "";
-        const res = await githubFetch(
+        const response = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/contents/${path}${query}`
         );
-        result = await res.json();
+        result = await response.json();
         break;
       }
 
       case "get_file": {
-        const res = await githubFetch(
+        const response = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/contents/${params.path}`
         );
-        result = await res.json();
+        result = await response.json();
         break;
       }
 
       case "list_branches": {
-        const res = await githubFetch(token, `/repos/${params.owner}/${params.repo}/branches?per_page=100`);
-        result = await res.json();
+        const response = await githubFetch(
+          token,
+          `/repos/${params.owner}/${params.repo}/branches?per_page=100`
+        );
+        result = await response.json();
         break;
       }
 
       case "get_tree": {
         const branch = params.branch || "main";
-        const res = await githubFetch(
+        const response = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/git/trees/${branch}?recursive=1`
         );
-        result = await res.json();
+        result = await response.json();
         break;
       }
 
       case "create_branch": {
-        // Get SHA of source branch
-        const refRes = await githubFetch(
+        const refResponse = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/git/ref/heads/${params.from || "main"}`
         );
-        if (!refRes.ok) {
+
+        if (!refResponse.ok) {
           result = { error: "Source branch not found" };
           break;
         }
-        const refData = await refRes.json();
+
+        const refData = await refResponse.json();
         const sha = refData.object.sha;
-        const res = await githubFetch(
-          token,
-          `/repos/${params.owner}/${params.repo}/git/refs`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              ref: `refs/heads/${params.branch}`,
-              sha,
-            }),
-          }
-        );
-        result = await res.json();
+        const response = await githubFetch(token, `/repos/${params.owner}/${params.repo}/git/refs`, {
+          method: "POST",
+          body: JSON.stringify({
+            ref: `refs/heads/${params.branch}`,
+            sha,
+          }),
+        });
+        result = await response.json();
         break;
       }
 
       case "delete_branch": {
-        const res = await githubFetch(
+        const response = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/git/refs/heads/${params.branch}`,
           { method: "DELETE" }
         );
-        result = res.ok ? { success: true } : await res.json();
+        result = response.ok ? { success: true } : await response.json();
         break;
       }
 
       case "list_commits": {
         const sha = params.branch ? `?sha=${params.branch}&per_page=30` : "?per_page=30";
-        const res = await githubFetch(
+        const response = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/commits${sha}`
         );
-        result = await res.json();
+        result = await response.json();
         break;
       }
 
       case "get_status": {
-        // Get the latest commit diff to simulate "status"
-        const commitRes = await githubFetch(
+        const commitResponse = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/commits?per_page=1`
         );
-        const commits = await commitRes.json();
+        const commits = await commitResponse.json();
+
         if (Array.isArray(commits) && commits.length > 0) {
-          const detailRes = await githubFetch(
+          const detailResponse = await githubFetch(
             token,
             `/repos/${params.owner}/${params.repo}/commits/${commits[0].sha}`
           );
-          result = await detailRes.json();
+          result = await detailResponse.json();
         } else {
           result = { files: [] };
         }
@@ -211,30 +227,29 @@ Deno.serve(async (req) => {
       }
 
       case "commit_file": {
-        // Get current file SHA if it exists
         let sha: string | undefined;
         let branch = params.branch ? String(params.branch) : "";
 
         if (!branch) {
-          const repoRes = await githubFetch(token, `/repos/${params.owner}/${params.repo}`);
-          if (repoRes.ok) {
-            const repoData = await repoRes.json();
+          const repoResponse = await githubFetch(token, `/repos/${params.owner}/${params.repo}`);
+          if (repoResponse.ok) {
+            const repoData = await repoResponse.json();
             branch = repoData.default_branch || "main";
           } else {
             branch = "main";
           }
         }
 
-        const existingRes = await githubFetch(
+        const existingResponse = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/contents/${params.path}`
         );
-        if (existingRes.ok) {
-          const existing = await existingRes.json();
+        if (existingResponse.ok) {
+          const existing = await existingResponse.json();
           sha = existing.sha;
         }
 
-        const res = await githubFetch(
+        const response = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/contents/${params.path}`,
           {
@@ -247,12 +262,12 @@ Deno.serve(async (req) => {
             }),
           }
         );
-        result = await res.json();
+        result = await response.json();
         break;
       }
 
       case "create_repo": {
-        const res = await githubFetch(token, "/user/repos", {
+        const response = await githubFetch(token, "/user/repos", {
           method: "POST",
           body: JSON.stringify({
             name: params.name,
@@ -261,121 +276,118 @@ Deno.serve(async (req) => {
             auto_init: true,
           }),
         });
-        result = await res.json();
+        result = await response.json();
         break;
       }
 
       case "compare_commits": {
-        // Compare two refs (branches, commits) for diff view
         const base = params.base || "main";
         const head = params.head || "HEAD";
-        const res = await githubFetch(
+        const response = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/compare/${base}...${head}`
         );
-        if (!res.ok) {
-          result = { error: `Compare failed (${res.status})` };
+
+        if (!response.ok) {
+          result = { error: `Compare failed (${response.status})` };
           break;
         }
-        const compareData = await res.json();
-        // Return a summary with files changed
+
+        const compareData = await response.json();
         result = {
           ahead_by: compareData.ahead_by,
           behind_by: compareData.behind_by,
           total_commits: compareData.total_commits,
-          files: (compareData.files || []).map((f: any) => ({
-            filename: f.filename,
-            status: f.status,
-            additions: f.additions,
-            deletions: f.deletions,
-            changes: f.changes,
-            patch: f.patch?.substring(0, 2000) || "", // Limit patch size
+          files: (compareData.files || []).map((file: any) => ({
+            filename: file.filename,
+            status: file.status,
+            additions: file.additions,
+            deletions: file.deletions,
+            changes: file.changes,
+            patch: file.patch?.substring(0, 2_000) || "",
           })),
         };
         break;
       }
 
       case "get_commit_diff": {
-        // Get diff for a specific commit
-        const res = await githubFetch(
+        const response = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/commits/${params.sha}`
         );
-        if (!res.ok) {
-          result = { error: `Failed to get commit (${res.status})` };
+
+        if (!response.ok) {
+          result = { error: `Failed to get commit (${response.status})` };
           break;
         }
-        const commitData = await res.json();
+
+        const commitData = await response.json();
         result = {
           sha: commitData.sha,
           message: commitData.commit?.message,
           author: commitData.commit?.author,
-          files: (commitData.files || []).map((f: any) => ({
-            filename: f.filename,
-            status: f.status,
-            additions: f.additions,
-            deletions: f.deletions,
-            patch: f.patch?.substring(0, 3000) || "",
+          files: (commitData.files || []).map((file: any) => ({
+            filename: file.filename,
+            status: file.status,
+            additions: file.additions,
+            deletions: file.deletions,
+            patch: file.patch?.substring(0, 3_000) || "",
           })),
         };
         break;
       }
 
       case "merge_branch": {
-        // Merge head branch into base branch
-        const res = await githubFetch(
-          token,
-          `/repos/${params.owner}/${params.repo}/merges`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              base: params.base,
-              head: params.head,
-              commit_message: params.message || `Merge ${params.head} into ${params.base}`,
-            }),
-          }
-        );
-        if (res.status === 409) {
-          result = { error: "merge_conflict", message: "Merge conflict detected. Please resolve conflicts manually." };
+        const response = await githubFetch(token, `/repos/${params.owner}/${params.repo}/merges`, {
+          method: "POST",
+          body: JSON.stringify({
+            base: params.base,
+            head: params.head,
+            commit_message: params.message || `Merge ${params.head} into ${params.base}`,
+          }),
+        });
+
+        if (response.status === 409) {
+          result = {
+            error: "merge_conflict",
+            message: "Merge conflict detected. Please resolve conflicts manually.",
+          };
           break;
         }
-        if (res.status === 204) {
-          result = { message: "Nothing to merge — already up to date." };
+
+        if (response.status === 204) {
+          result = { message: "Nothing to merge - already up to date." };
           break;
         }
-        result = await res.json();
+
+        result = await response.json();
         break;
       }
 
       case "pull_status": {
-        // Check if local branch is behind remote (compare default branch)
         const branch = params.branch || "main";
-        const commitsRes = await githubFetch(
+        const commitsResponse = await githubFetch(
           token,
           `/repos/${params.owner}/${params.repo}/commits?sha=${branch}&per_page=1`
         );
-        const latestCommits = await commitsRes.json();
+        const latestCommits = await commitsResponse.json();
         result = {
-          latest_sha: Array.isArray(latestCommits) && latestCommits[0]?.sha || null,
+          latest_sha: (Array.isArray(latestCommits) && latestCommits[0]?.sha) || null,
           branch,
         };
         break;
       }
 
       default:
-        return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return jsonResponse({ error: `Unknown action: ${action}` }, 400, responseHeaders);
     }
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(result, 200, responseHeaders);
   } catch (error: unknown) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(
+      { error: error instanceof Error ? error.message : String(error) },
+      500,
+      preflightHeaders
+    );
   }
 });

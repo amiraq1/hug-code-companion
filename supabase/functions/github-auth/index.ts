@@ -1,222 +1,230 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version, x-session-id",
-};
-
-/** Rate limiting - simple in-memory tracker */
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 10; // requests per window
-const RATE_WINDOW = 60_000; // 1 minute
-
-function checkRateLimit(key: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
-
-/** Validate session_id format */
-function isValidUUID(str: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-}
-
-/** Sanitize redirect URI */
-function sanitizeRedirectUri(uri: string, fallback: string): string {
-  try {
-    const parsed = new URL(uri);
-    // Only allow https (or http for localhost)
-    if (parsed.protocol === "https:" || (parsed.protocol === "http:" && parsed.hostname === "localhost")) {
-      return parsed.origin;
-    }
-  } catch {}
-  return fallback;
-}
-
-function toBase64Url(bytes: Uint8Array): string {
-  const base64 = btoa(String.fromCharCode(...bytes));
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-}
-
-function fromBase64Url(value: string): Uint8Array {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
-  const binary = atob(padded);
-  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
-}
-
-function secureEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-async function signValue(value: string, secret: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
-  return toBase64Url(new Uint8Array(signature));
-}
+import {
+  clearSessionProofCookie,
+  createCorsHeaders,
+  createSessionProofCookie,
+  isPublicWebOrigin,
+  parseSignedJsonPayload,
+  readVerifiedSessionProof,
+  signJsonPayload,
+  type SessionProofPayload,
+} from "../_shared/sessionSecurity.ts";
 
 type OAuthState = {
   session_id: string;
   redirect_uri: string;
+  app_origin: string;
   csrf_token?: string;
   ts?: number;
 };
 
-async function buildSignedState(payload: OAuthState, secret: string): Promise<string> {
-  const encodedPayload = toBase64Url(new TextEncoder().encode(JSON.stringify(payload)));
-  const signature = await signValue(encodedPayload, secret);
-  return `${encodedPayload}.${signature}`;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT = 10;
+const RATE_WINDOW = 60_000;
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_WINDOW });
+    return true;
+  }
+
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count += 1;
+  return true;
 }
 
-async function parseAndVerifyState(stateParam: string, secret: string): Promise<OAuthState | null> {
-  const [encodedPayload, signature] = stateParam.split(".");
-  if (!encodedPayload || !signature) return null;
+function isValidUUID(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
 
-  const expectedSignature = await signValue(encodedPayload, secret);
-  if (!secureEqual(signature, expectedSignature)) return null;
-
+function sanitizeAppOrigin(origin: string, fallback: string): string {
   try {
-    const payloadJson = new TextDecoder().decode(fromBase64Url(encodedPayload));
-    return JSON.parse(payloadJson);
+    const parsed = new URL(origin);
+    return isPublicWebOrigin(parsed.origin) ? parsed.origin : fallback;
   } catch {
-    return null;
+    return fallback;
   }
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+function isAllowedNativeRedirect(parsed: URL): boolean {
+  const protocol = parsed.protocol.replace(":", "");
+  if (!protocol || protocol === "http" || protocol === "https") {
+    return false;
   }
 
-  const url = new URL(req.url);
+  return /^[a-z][a-z0-9+.-]*$/i.test(protocol);
+}
+
+function sanitizeRedirectUri(uri: string, fallback: string): string {
+  try {
+    const parsed = new URL(uri);
+
+    if (parsed.protocol === "https:" || (parsed.protocol === "http:" && parsed.hostname === "localhost")) {
+      return parsed.toString();
+    }
+
+    if (isAllowedNativeRedirect(parsed)) {
+      return parsed.toString();
+    }
+  } catch {
+    // Ignore and fall back.
+  }
+
+  return fallback;
+}
+
+function buildRedirectUrl(base: string, fallback: string): URL {
+  try {
+    return new URL(base);
+  } catch {
+    return new URL(fallback);
+  }
+}
+
+function shouldReturnProofInUrl(redirectUri: string): boolean {
+  try {
+    const parsed = new URL(redirectUri);
+    return parsed.protocol !== "https:" && parsed.protocol !== "http:";
+  } catch {
+    return false;
+  }
+}
+
+function responseJson(body: unknown, status: number, headers: Record<string, string>) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...headers, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (request) => {
+  const requestOrigin = request.headers.get("origin");
+  const preflightHeaders = createCorsHeaders(requestOrigin, Boolean(requestOrigin));
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: preflightHeaders });
+  }
+
+  const url = new URL(request.url);
   const path = url.pathname.split("/").pop();
 
   const clientId = Deno.env.get("GITHUB_CLIENT_ID")!;
   const clientSecret = Deno.env.get("GITHUB_CLIENT_SECRET")!;
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabaseOrigin = new URL(supabaseUrl).origin;
   const stateSecret = Deno.env.get("OAUTH_STATE_SECRET") || clientSecret;
 
-  // ─── Step 1: Start OAuth ──────────────────────────────────────────
   if (path === "authorize") {
     const sessionId = url.searchParams.get("session_id");
     const redirectUri = url.searchParams.get("redirect_uri") || "";
+    const appOrigin = url.searchParams.get("app_origin") || "";
     const csrfToken = url.searchParams.get("csrf_token") || "";
 
     if (!sessionId || !isValidUUID(sessionId)) {
-      return new Response("Invalid session_id", { status: 400, headers: corsHeaders });
+      return new Response("Invalid session_id", { status: 400, headers: preflightHeaders });
     }
 
     if (!csrfToken) {
-      return new Response("Missing csrf_token", { status: 400, headers: corsHeaders });
+      return new Response("Missing csrf_token", { status: 400, headers: preflightHeaders });
     }
 
     if (!checkRateLimit(`auth:${sessionId}`)) {
-      return new Response("Too many requests", { status: 429, headers: corsHeaders });
+      return new Response("Too many requests", { status: 429, headers: preflightHeaders });
     }
 
-    const safeRedirect = sanitizeRedirectUri(redirectUri, supabaseUrl);
-
-    // Include CSRF token in state for round-trip verification
-    const state = await buildSignedState(
+    const safeAppOrigin = sanitizeAppOrigin(appOrigin || redirectUri, supabaseOrigin);
+    const safeRedirect = sanitizeRedirectUri(redirectUri, safeAppOrigin);
+    const state = await signJsonPayload<OAuthState>(
       {
         session_id: sessionId,
         redirect_uri: safeRedirect,
+        app_origin: safeAppOrigin,
         csrf_token: csrfToken,
         ts: Date.now(),
       },
       stateSecret
     );
 
-    const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&scope=repo,user&state=${state}`;
+    const githubAuthUrl =
+      `https://github.com/login/oauth/authorize?client_id=${clientId}` +
+      `&scope=repo,user&state=${state}`;
 
     return new Response(null, {
       status: 302,
-      headers: { Location: githubAuthUrl, ...corsHeaders },
+      headers: { ...preflightHeaders, Location: githubAuthUrl },
     });
   }
 
-  // ─── Step 2: Callback from GitHub ──────────────────────────────────
   if (path === "callback") {
     const code = url.searchParams.get("code");
     const stateParam = url.searchParams.get("state");
 
     if (!code || !stateParam) {
-      return new Response("Missing code or state", { status: 400, headers: corsHeaders });
+      return new Response("Missing code or state", { status: 400, headers: preflightHeaders });
     }
 
-    const state = await parseAndVerifyState(stateParam, stateSecret);
+    const state = await readVerifiedState(stateParam, stateSecret);
     if (!state) {
-      return new Response("Invalid state parameter", { status: 400, headers: corsHeaders });
+      return new Response("Invalid state parameter", { status: 400, headers: preflightHeaders });
     }
 
-    const safeRedirect = sanitizeRedirectUri(state.redirect_uri || "", supabaseUrl);
+    const safeAppOrigin = sanitizeAppOrigin(state.app_origin || "", supabaseOrigin);
+    const safeRedirect = sanitizeRedirectUri(state.redirect_uri || "", safeAppOrigin);
+    const redirectUrl = buildRedirectUrl(safeRedirect, supabaseUrl);
 
-    // Validate session_id
     if (!state.session_id || !isValidUUID(state.session_id)) {
-      return new Response("Invalid session in state", { status: 400, headers: corsHeaders });
+      return new Response("Invalid session in state", { status: 400, headers: preflightHeaders });
     }
 
-    // Check state age (max 10 minutes)
     if (state.ts && Date.now() - state.ts > 10 * 60 * 1000) {
-      const redirectUrl = new URL(safeRedirect);
       redirectUrl.searchParams.set("auth_error", "OAuth session expired. Please try again.");
-      return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
+      return new Response(null, {
+        status: 302,
+        headers: { ...preflightHeaders, Location: redirectUrl.toString() },
+      });
     }
 
-    // Rate limit callback
     if (!checkRateLimit(`cb:${state.session_id}`)) {
-      return new Response("Too many requests", { status: 429, headers: corsHeaders });
+      return new Response("Too many requests", { status: 429, headers: preflightHeaders });
     }
 
-    // Exchange code for access token
-    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+    const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
     });
-
-    const tokenData = await tokenRes.json();
+    const tokenData = await tokenResponse.json();
 
     if (tokenData.error) {
-      const redirectUrl = new URL(safeRedirect);
       redirectUrl.searchParams.set("auth_error", tokenData.error_description || tokenData.error);
-      return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
+      return new Response(null, {
+        status: 302,
+        headers: { ...preflightHeaders, Location: redirectUrl.toString() },
+      });
     }
 
-    // Get GitHub user info
-    const userRes = await fetch("https://api.github.com/user", {
-      headers: { Authorization: `Bearer ${tokenData.access_token}`, Accept: "application/vnd.github.v3+json" },
+    const userResponse = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+        Accept: "application/vnd.github.v3+json",
+      },
     });
 
-    if (!userRes.ok) {
-      const redirectUrl = new URL(safeRedirect);
+    if (!userResponse.ok) {
       redirectUrl.searchParams.set("auth_error", "Failed to fetch GitHub user info");
-      return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
+      return new Response(null, {
+        status: 302,
+        headers: { ...preflightHeaders, Location: redirectUrl.toString() },
+      });
     }
 
-    const userData = await userRes.json();
-
-    // Store token in database
+    const userData = await userResponse.json();
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { error: dbError } = await supabase.from("github_tokens").upsert(
+    const { error: databaseError } = await supabase.from("github_tokens").upsert(
       {
         session_id: state.session_id,
         access_token: tokenData.access_token,
@@ -226,43 +234,62 @@ Deno.serve(async (req) => {
       { onConflict: "session_id" }
     );
 
-    if (dbError) {
-      console.error("DB error storing token:", dbError.message);
-      const redirectUrl = new URL(safeRedirect);
+    if (databaseError) {
+      console.error("DB error storing token:", databaseError.message);
       redirectUrl.searchParams.set("auth_error", "Failed to save authentication");
-      return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
+      return new Response(null, {
+        status: 302,
+        headers: { ...preflightHeaders, Location: redirectUrl.toString() },
+      });
     }
 
-    // Redirect back to app with CSRF token for client verification
-    const redirectUrl = new URL(safeRedirect);
+    const sessionProof = await signJsonPayload<SessionProofPayload>(
+      {
+        session_id: state.session_id,
+        app_origin: safeAppOrigin,
+        ts: Date.now(),
+      },
+      stateSecret
+    );
+
     redirectUrl.searchParams.set("github_connected", "true");
     redirectUrl.searchParams.set("github_username", userData.login);
     if (state.csrf_token) {
       redirectUrl.searchParams.set("csrf_token", state.csrf_token);
     }
+    if (shouldReturnProofInUrl(safeRedirect)) {
+      redirectUrl.searchParams.set("session_proof", sessionProof);
+    }
 
     return new Response(null, {
       status: 302,
-      headers: { Location: redirectUrl.toString() },
+      headers: {
+        ...preflightHeaders,
+        Location: redirectUrl.toString(),
+        "Set-Cookie": createSessionProofCookie(sessionProof),
+      },
     });
   }
 
-  // ─── Status check ──────────────────────────────────────────────────
   if (path === "status") {
     const sessionId = url.searchParams.get("session_id");
     if (!sessionId || !isValidUUID(sessionId)) {
-      return new Response(JSON.stringify({ connected: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return responseJson({ connected: false }, 200, preflightHeaders);
     }
 
     if (!checkRateLimit(`status:${sessionId}`)) {
-      return new Response(JSON.stringify({ error: "Too many requests" }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return responseJson({ error: "Too many requests" }, 429, preflightHeaders);
     }
 
+    const proof = await readVerifiedSessionProof(request, stateSecret);
+    const originAllowed =
+      isPublicWebOrigin(requestOrigin) && proof?.app_origin === requestOrigin && proof.session_id === sessionId;
+
+    if (!originAllowed) {
+      return responseJson({ connected: false }, 200, preflightHeaders);
+    }
+
+    const responseHeaders = createCorsHeaders(requestOrigin, true);
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { data } = await supabase
       .from("github_tokens")
@@ -270,48 +297,71 @@ Deno.serve(async (req) => {
       .eq("session_id", sessionId)
       .single();
 
-    // Check if token is stale (older than 30 days → suggest re-auth)
     let tokenStale = false;
     if (data?.updated_at) {
       const age = Date.now() - new Date(data.updated_at).getTime();
       tokenStale = age > 30 * 24 * 60 * 60 * 1000;
     }
 
-    return new Response(
-      JSON.stringify({
+    return responseJson(
+      {
         connected: !!data,
         username: data?.github_username || null,
         token_stale: tokenStale,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      },
+      200,
+      responseHeaders
     );
   }
 
-  // ─── Disconnect ────────────────────────────────────────────────────
   if (path === "disconnect") {
-    try {
-      const { session_id } = await req.json();
+    const body = await safeJson(request);
+    const sessionId = body?.session_id;
 
-      if (!session_id || !isValidUUID(session_id)) {
-        return new Response(JSON.stringify({ error: "Invalid session_id" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (!sessionId || typeof sessionId !== "string" || !isValidUUID(sessionId)) {
+      return responseJson({ error: "Invalid session_id" }, 400, preflightHeaders);
+    }
 
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      await supabase.from("github_tokens").delete().eq("session_id", session_id);
+    const proof = await readVerifiedSessionProof(request, stateSecret);
+    const originAllowed =
+      isPublicWebOrigin(requestOrigin) && proof?.app_origin === requestOrigin && proof.session_id === sessionId;
 
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } catch (err) {
-      return new Response(JSON.stringify({ error: "Invalid request body" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const responseHeaders = createCorsHeaders(requestOrigin, Boolean(requestOrigin));
+
+    if (!originAllowed) {
+      return new Response(JSON.stringify({ error: "Unauthorized session proof" }), {
+        status: 401,
+        headers: {
+          ...responseHeaders,
+          "Content-Type": "application/json",
+          "Set-Cookie": clearSessionProofCookie(),
+        },
       });
     }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    await supabase.from("github_tokens").delete().eq("session_id", sessionId);
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: {
+        ...createCorsHeaders(requestOrigin, true),
+        "Content-Type": "application/json",
+        "Set-Cookie": clearSessionProofCookie(),
+      },
+    });
   }
 
-  return new Response("Not found", { status: 404, headers: corsHeaders });
+  return new Response("Not found", { status: 404, headers: preflightHeaders });
 });
+
+async function readVerifiedState(stateParam: string, secret: string): Promise<OAuthState | null> {
+  return parseSignedJsonPayload<OAuthState>(stateParam, secret);
+}
+
+async function safeJson(request: Request): Promise<Record<string, unknown> | null> {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}

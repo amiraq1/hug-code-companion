@@ -92,7 +92,7 @@ export function ProfileScreen() {
             setIsEditing(false);
         },
         onError: (err) => {
-            toast.error("فشل في حفظ البيانات. يرجى التأكد من إنشاء جدول profiles في Supabase.");
+            toast.error("فشل في حفظ بيانات الملف الشخصي.");
             console.error(err);
         }
     });
@@ -102,6 +102,12 @@ export function ProfileScreen() {
         { icon: Zap, title: "Performant", color: "text-amber-500", bg: "bg-amber-500/10" },
         { icon: Server, title: "Native Master", color: "text-emerald-500", bg: "bg-emerald-500/10" },
     ];
+    const normalizedWebsite = formData.website.trim();
+    const websiteHref = normalizedWebsite
+        ? normalizedWebsite.startsWith("http")
+            ? normalizedWebsite
+            : `https://${normalizedWebsite}`
+        : null;
 
     const handleSave = () => {
         saveProfileMutation.mutate(formData);
@@ -226,9 +232,13 @@ export function ProfileScreen() {
                                     {isEditing ? (
                                         <input type="text" value={formData.website} onChange={(e) => setFormData({ ...formData, website: e.target.value })} className="bg-secondary rounded px-2 py-1 outline-none w-full border border-border" />
                                     ) : (
-                                        <a href={formData.website?.startsWith('http') ? formData.website : `https://${formData.website}`} target="_blank" rel="noreferrer" className="text-primary hover:underline line-clamp-1">
-                                            {formData.website?.replace('https://', '') || 'No website'}
-                                        </a>
+                                        websiteHref ? (
+                                            <a href={websiteHref} target="_blank" rel="noreferrer" className="text-primary hover:underline line-clamp-1">
+                                                {normalizedWebsite.replace('https://', '')}
+                                            </a>
+                                        ) : (
+                                            <span>No website</span>
+                                        )
                                     )}
                                 </div>
                             </div>
@@ -353,19 +363,28 @@ export function ProfileScreen() {
                                     <div className="space-y-4 bg-secondary/20 p-4 rounded-lg border border-border/50">
                                         <div className="flex justify-between items-center pb-4 border-b border-border/50">
                                             <div>
-                                                <p className="text-sm font-medium">Current Session ID</p>
-                                                <p className="text-xs text-muted-foreground font-mono">{sessionId}</p>
+                                                <p className="text-sm font-medium">Session Protection</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Origin-bound session proof is stored in an HttpOnly cookie and never exposed in the UI.
+                                                </p>
                                             </div>
                                             <div className="w-2 h-2 rounded-full bg-ide-success"></div>
                                         </div>
                                         <div className="flex justify-between items-center pt-2">
                                             <div>
                                                 <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                                                    GitHub OAuth <span className="px-1.5 py-0.5 rounded bg-ide-success/10 text-ide-success text-[10px] font-bold uppercase tracking-wider">Connected</span>
+                                                    GitHub OAuth <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${username
+                                                        ? "bg-ide-success/10 text-ide-success"
+                                                        : "bg-muted text-muted-foreground"
+                                                        }`}>{username ? "Connected" : "Inactive"}</span>
                                                 </p>
-                                                <p className="text-xs text-muted-foreground mt-1">Authenticated via GitHub securely.</p>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {username
+                                                        ? "Authenticated via GitHub with cookie-bound session verification."
+                                                        : "Connect GitHub to enable repository access and signed session verification."}
+                                                </p>
                                             </div>
-                                            <button className="text-xs text-primary hover:underline font-medium">Manage</button>
+                                            <span className="text-xs text-muted-foreground font-mono">{sessionId.slice(0, 8)}••••</span>
                                         </div>
                                     </div>
                                 </div>

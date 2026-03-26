@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { marked } from "marked";
 import type { FileNode } from "@/stores/editorStore";
+import { detectFileLanguage } from "@/lib/fileMeta";
+import { sanitizePreviewDocument, sanitizePreviewFragment } from "@/lib/previewSecurity";
 
 export interface PreviewError {
   message: string;
@@ -16,35 +18,34 @@ export function usePreview() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [errors, setErrors] = useState<PreviewError[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [scriptExecutionEnabled, setScriptExecutionEnabled] = useState(false);
   const lastInjectedRef = useRef<string>("");
 
-  // Listen for messages from the iframe
   useEffect(() => {
-    const handler = (e: MessageEvent) => {
+    const handler = (event: MessageEvent) => {
       const previewWindow = iframeRef.current?.contentWindow;
-      if (!previewWindow || e.source !== previewWindow || typeof e.data !== "object" || e.data === null) {
+      if (!previewWindow || event.source !== previewWindow || typeof event.data !== "object" || event.data === null) {
         return;
       }
 
-      if (e.data?.type === "preview-error") {
+      if (event.data?.type === "preview-error") {
         setErrors((prev) => [
           ...prev.slice(-19),
           {
-            message: e.data.message,
-            line: e.data.line,
-            col: e.data.col,
-            source: e.data.source,
+            message: event.data.message,
+            line: event.data.line,
+            col: event.data.col,
+            source: event.data.source,
             timestamp: new Date(),
           },
         ]);
       }
-      if (e.data?.type === "preview-warning") {
-        setWarnings((prev) => [...prev.slice(-19), e.data.message]);
-      }
-      if (e.data?.type === "preview-console") {
-        // Could forward to a console panel
+
+      if (event.data?.type === "preview-warning") {
+        setWarnings((prev) => [...prev.slice(-19), event.data.message]);
       }
     };
+
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
   }, []);
@@ -54,103 +55,114 @@ export function usePreview() {
     setWarnings([]);
   }, []);
 
-  const buildHTMLDocument = useCallback((file: FileNode): string => {
-    const lang = file.language || "";
-    const content = file.content || "";
-    const lowerName = file.name.toLowerCase();
+  const toggleScriptExecution = useCallback(() => {
+    clearErrors();
+    setScriptExecutionEnabled((enabled) => !enabled);
+  }, [clearErrors]);
 
-    // Markdown preview
-    if (lang === "markdown") {
-      const html = marked.parse(content, { async: false }) as string;
-      return wrapInDocument(
-        `<article class="markdown-body">${html}</article>`,
-        getMarkdownStyles()
-      );
-    }
+  const buildHTMLDocument = useCallback(
+    (file: FileNode): string => {
+      const lang = file.language || "";
+      const content = file.content || "";
+      const resolvedLanguage = detectFileLanguage(file.name, lang);
 
-    // JSON preview
-    if (lang === "json") {
-      try {
-        const parsed = JSON.parse(content);
-        const formatted = JSON.stringify(parsed, null, 2);
+      if (resolvedLanguage === "markdown") {
+        const html = marked.parse(content, { async: false }) as string;
         return wrapInDocument(
-          `<pre class="json-view"><code>${escapeHtml(formatted)}</code></pre>`,
-          getJsonStyles()
-        );
-      } catch (e: unknown) {
-        return wrapInDocument(
-          `<div class="json-error">
-            <span class="error-icon">⚠</span>
-            <span>Invalid JSON: ${escapeHtml((e as Error).message)}</span>
-          </div>
-          <pre class="json-raw"><code>${escapeHtml(content)}</code></pre>`,
-          getJsonStyles()
+          `<article class="markdown-body">${sanitizePreviewFragment(html)}</article>`,
+          getMarkdownStyles()
         );
       }
-    }
 
-    // HTML preview
-    if (lang === "html") {
-      return injectBridge(content);
-    }
+      if (resolvedLanguage === "json") {
+        try {
+          const parsed = JSON.parse(content);
+          const formatted = JSON.stringify(parsed, null, 2);
+          return wrapInDocument(
+            `<pre class="json-view"><code>${escapeHtml(formatted)}</code></pre>`,
+            getJsonStyles()
+          );
+        } catch (error: unknown) {
+          return wrapInDocument(
+            `<div class="json-error">
+              <span class="error-icon">⚠</span>
+              <span>Invalid JSON: ${escapeHtml((error as Error).message)}</span>
+            </div>
+            <pre class="json-raw"><code>${escapeHtml(content)}</code></pre>`,
+            getJsonStyles()
+          );
+        }
+      }
 
-    // CSS preview
-    if (lang === "css") {
+      if (resolvedLanguage === "html") {
+        if (!scriptExecutionEnabled) {
+          return sanitizePreviewDocument(content);
+        }
+
+        return injectBridge(content);
+      }
+
+      if (resolvedLanguage === "css") {
+        return wrapInDocument(
+          `<div class="css-demo">
+            <h2>CSS Preview</h2>
+            <div class="demo-box">Demo Element</div>
+            <button class="demo-btn">Button</button>
+            <input class="demo-input" placeholder="Input field" />
+            <p class="demo-text">Sample paragraph text for styling preview.</p>
+          </div>`,
+          content
+        );
+      }
+
+      if (resolvedLanguage === "javascript") {
+        if (!scriptExecutionEnabled) {
+          return wrapInDocument(
+            `<div class="ts-hint">
+              <strong>Safe preview:</strong> JavaScript execution is disabled.
+              Enable scripts explicitly to run this file.
+            </div>
+            <pre class="source-view"><code>${escapeHtml(content)}</code></pre>`,
+            getTypeScriptStyles()
+          );
+        }
+
+        return wrapInDocument(
+          `<div id="output" class="js-output"></div>`,
+          getJsStyles(),
+          buildJsRunner(content),
+          { enableBridge: true }
+        );
+      }
+
+      if (resolvedLanguage === "typescript") {
+        return wrapInDocument(
+          `<div class="ts-hint">
+            <strong>TypeScript preview note:</strong> direct execution is disabled.
+            Use build/runtime toolchain (Vite) for TS/TSX files.
+          </div>
+          <pre class="source-view"><code>${escapeHtml(content)}</code></pre>`,
+          getTypeScriptStyles()
+        );
+      }
+
       return wrapInDocument(
-        `<div class="css-demo">
-          <h2>CSS Preview</h2>
-          <div class="demo-box">Demo Element</div>
-          <button class="demo-btn">Button</button>
-          <input class="demo-input" placeholder="Input field" />
-          <p class="demo-text">Sample paragraph text for styling preview.</p>
-        </div>`,
-        content
+        `<pre class="source-view"><code>${escapeHtml(content)}</code></pre>`,
+        getSourceStyles()
       );
-    }
-
-    // JavaScript preview – execute
-    if (lang === "javascript") {
-      return wrapInDocument(
-        `<div id="output" class="js-output"></div>`,
-        getJsStyles(),
-        buildJsRunner(content)
-      );
-    }
-
-    // TypeScript/TSX preview – display source to avoid runtime syntax errors
-    if (
-      lang === "typescript" ||
-      lowerName.endsWith(".ts") ||
-      lowerName.endsWith(".tsx")
-    ) {
-      return wrapInDocument(
-        `<div class="ts-hint">
-          <strong>TypeScript preview note:</strong> direct execution is disabled.
-          Use build/runtime toolchain (Vite) for TS/TSX files.
-        </div>
-        <pre class="source-view"><code>${escapeHtml(content)}</code></pre>`,
-        getTypeScriptStyles()
-      );
-    }
-
-    // Fallback: show source
-    return wrapInDocument(
-      `<pre class="source-view"><code>${escapeHtml(content)}</code></pre>`,
-      getSourceStyles()
-    );
-  }, []);
+    },
+    [scriptExecutionEnabled]
+  );
 
   const injectPreview = useCallback(
     (file: FileNode | null) => {
       if (!file || !iframeRef.current) return;
+
       const html = buildHTMLDocument(file);
-
-      // Skip if identical to last injection (prevents flicker)
       if (html === lastInjectedRef.current) return;
-      lastInjectedRef.current = html;
 
-      const iframe = iframeRef.current;
-      iframe.srcdoc = html;
+      lastInjectedRef.current = html;
+      iframeRef.current.srcdoc = html;
     },
     [buildHTMLDocument]
   );
@@ -158,28 +170,36 @@ export function usePreview() {
   const injectCSS = useCallback((css: string) => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-    const doc = iframe.contentDocument;
-    if (!doc) return;
 
-    let styleEl = doc.getElementById("live-injected-css") as HTMLStyleElement | null;
-    if (!styleEl) {
-      styleEl = doc.createElement("style");
-      styleEl.id = "live-injected-css";
-      doc.head.appendChild(styleEl);
+    const document = iframe.contentDocument;
+    if (!document) return;
+
+    let styleElement = document.getElementById("live-injected-css") as HTMLStyleElement | null;
+    if (!styleElement) {
+      styleElement = document.createElement("style");
+      styleElement.id = "live-injected-css";
+      document.head.appendChild(styleElement);
     }
-    styleEl.textContent = css;
+
+    styleElement.textContent = css;
   }, []);
 
-  const injectJS = useCallback((js: string) => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    iframe.contentWindow?.postMessage({ type: "exec-js", code: js }, "*");
-  }, []);
+  const injectJS = useCallback(
+    (js: string) => {
+      if (!scriptExecutionEnabled) {
+        setWarnings((prev) => [...prev.slice(-19), "Script execution is disabled in safe preview."]);
+        return;
+      }
 
-  const zoomIn = useCallback(() => setZoom((z) => Math.min(z + 10, 200)), []);
-  const zoomOut = useCallback(() => setZoom((z) => Math.max(z - 10, 30)), []);
+      iframeRef.current?.contentWindow?.postMessage({ type: "exec-js", code: js }, "*");
+    },
+    [scriptExecutionEnabled]
+  );
+
+  const zoomIn = useCallback(() => setZoom((value) => Math.min(value + 10, 200)), []);
+  const zoomOut = useCallback(() => setZoom((value) => Math.max(value - 10, 30)), []);
   const resetZoom = useCallback(() => setZoom(100), []);
-  const toggleFullscreen = useCallback(() => setIsFullscreen((f) => !f), []);
+  const toggleFullscreen = useCallback(() => setIsFullscreen((value) => !value), []);
 
   return {
     iframeRef,
@@ -187,6 +207,7 @@ export function usePreview() {
     isFullscreen,
     errors,
     warnings,
+    scriptExecutionEnabled,
     clearErrors,
     injectPreview,
     injectCSS,
@@ -195,13 +216,12 @@ export function usePreview() {
     zoomOut,
     resetZoom,
     toggleFullscreen,
+    toggleScriptExecution,
   };
 }
 
-// ── Helpers ──
-
-function escapeHtml(str: string): string {
-  return str
+function escapeHtml(value: string): string {
+  return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -211,47 +231,71 @@ function escapeHtml(str: string): string {
 function injectBridge(html: string): string {
   const bridge = `
 <script>
-window.addEventListener("error", function(e) {
+window.addEventListener("error", function(event) {
   window.parent.postMessage({
     type: "preview-error",
-    message: e.message,
-    line: e.lineno,
-    col: e.colno,
-    source: e.filename
+    message: event.message,
+    line: event.lineno,
+    col: event.colno,
+    source: event.filename
   }, "*");
 });
-window.addEventListener("message", function(e) {
-  if (e.source !== window.parent || typeof e.data !== "object" || e.data === null) return;
-  if (e.data?.type === "exec-js") {
-    try { eval(e.data.code); }
-    catch(err) {
-      window.parent.postMessage({
-        type: "preview-error",
-        message: String(err)
-      }, "*");
+window.addEventListener("message", function(event) {
+  if (event.source !== window.parent || typeof event.data !== "object" || event.data === null) return;
+  if (event.data?.type === "exec-js") {
+    try { eval(event.data.code); }
+    catch (error) {
+      window.parent.postMessage({ type: "preview-error", message: String(error) }, "*");
     }
   }
 });
-const _origLog = console.log;
+const originalLog = console.log;
 console.log = function(...args) {
-  _origLog.apply(console, args);
+  originalLog.apply(console, args);
   window.parent.postMessage({
     type: "preview-console",
-    message: args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(" ")
+    message: args.map((arg) => typeof arg === "object" ? JSON.stringify(arg) : String(arg)).join(" ")
   }, "*");
 };
 console.warn = function(...args) {
   window.parent.postMessage({ type: "preview-warning", message: args.join(" ") }, "*");
 };
 </script>`;
-  // Inject bridge before </head> or at top
+
   if (html.includes("</head>")) {
-    return html.replace("</head>", bridge + "</head>");
+    return html.replace("</head>", `${bridge}</head>`);
   }
-  return bridge + html;
+
+  return `${bridge}${html}`;
 }
 
-function wrapInDocument(body: string, css: string = "", js: string = ""): string {
+function wrapInDocument(
+  body: string,
+  css = "",
+  js = "",
+  options: { enableBridge?: boolean } = {}
+): string {
+  const bridge = options.enableBridge
+    ? `<script>
+window.addEventListener("error", function(event) {
+  window.parent.postMessage({ type: "preview-error", message: event.message, line: event.lineno, col: event.colno, source: event.filename }, "*");
+});
+window.addEventListener("message", function(event) {
+  if (event.source !== window.parent || typeof event.data !== "object" || event.data === null) return;
+  if (event.data?.type === "exec-js") {
+    try { eval(event.data.code); }
+    catch (error) { window.parent.postMessage({ type: "preview-error", message: String(error) }, "*"); }
+  }
+});
+console.log = function(...args) {
+  window.parent.postMessage({ type: "preview-console", message: args.map((value) => typeof value === "object" ? JSON.stringify(value) : String(value)).join(" ") }, "*");
+};
+console.warn = function(...args) {
+  window.parent.postMessage({ type: "preview-warning", message: args.join(" ") }, "*");
+};
+</script>`
+    : "";
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -268,17 +312,7 @@ body{
 }
 ${css}
 </style>
-<script>
-window.addEventListener("error",function(e){
-  window.parent.postMessage({type:"preview-error",message:e.message,line:e.lineno,col:e.colno,source:e.filename},"*");
-});
-window.addEventListener("message",function(e){
-  if(e.source!==window.parent||typeof e.data!=="object"||e.data===null)return;
-  if(e.data?.type==="exec-js"){try{eval(e.data.code)}catch(err){window.parent.postMessage({type:"preview-error",message:String(err)},"*")}}
-});
-console.log=function(...a){window.parent.postMessage({type:"preview-console",message:a.map(x=>typeof x==="object"?JSON.stringify(x):String(x)).join(" ")},"*")};
-console.warn=function(...a){window.parent.postMessage({type:"preview-warning",message:a.join(" ")},"*")};
-</script>
+${bridge}
 </head>
 <body>
 ${body}
@@ -290,35 +324,32 @@ ${js ? `<script type="module">${js}</script>` : ""}
 function buildJsRunner(code: string): string {
   const safeCode = escapeClosingScriptTag(code);
 
-  // Redirect console.log to DOM, allow top-level imports
   return `
-  const out = document.getElementById("output");
-  const _log = console.log;
-  console.log = function(...args){
-    _log.apply(console,args);
+  const output = document.getElementById("output");
+  const originalLog = console.log;
+  console.log = function(...args) {
+    originalLog.apply(console, args);
     const line = document.createElement("div");
     line.className = "log-line";
-    line.textContent = args.map(a => typeof a==="object"?JSON.stringify(a,null,2):String(a)).join(" ");
-    if(out) out.appendChild(line);
+    line.textContent = args.map((arg) => typeof arg === "object" ? JSON.stringify(arg, null, 2) : String(arg)).join(" ");
+    if (output) output.appendChild(line);
   };
-  const _err = console.error;
-  console.error = function(...args){
-    _err.apply(console,args);
+  const originalError = console.error;
+  console.error = function(...args) {
+    originalError.apply(console, args);
     const line = document.createElement("div");
     line.className = "log-line error";
-    line.textContent = "❌ " + args.join(" ");
-    if(out) out.appendChild(line);
+    line.textContent = "Error: " + args.join(" ");
+    if (output) output.appendChild(line);
   };
-  window.addEventListener("error", function(e) {
-    if(out) {
+  window.addEventListener("error", function(event) {
+    if (output) {
       const line = document.createElement("div");
       line.className = "log-line error";
-      line.textContent = "❌ " + e.message;
-      out.appendChild(line);
+      line.textContent = "Error: " + event.message;
+      output.appendChild(line);
     }
   });
-
-  // User Code:
   ${safeCode}
   `;
 }

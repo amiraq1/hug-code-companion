@@ -1,193 +1,216 @@
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Sparkles, Code2, ArrowLeft, ArrowUpRight, Github, Zap } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Sparkles, Code2, ArrowLeft, ArrowUpRight, Github, Eye, GitBranch } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface LandingScreenProps {
   onEnter: () => void;
 }
 
 export const LandingScreen = ({ onEnter }: LandingScreenProps) => {
-  const isMobile = useIsMobile();
   const { scrollYProgress } = useScroll();
-  
-  const yElement1 = useTransform(scrollYProgress, [0, 1], [0, isMobile ? -50 : -150]);
-  const yElement2 = useTransform(scrollYProgress, [0, 1], [0, isMobile ? 50 : 100]);
+  const yElement1 = useTransform(scrollYProgress, [0, 1], [0, -50]);
+  const yElement2 = useTransform(scrollYProgress, [0, 1], [0, 50]);
+
+  const mobileHighlights = [
+    { label: "GitHub", value: "Sync", icon: Github },
+    { label: "Preview", value: "Live", icon: Eye },
+    { label: "Agent", value: "Ready", icon: Sparkles },
+  ];
+
+  const mobileBenefits = [
+    {
+      icon: Code2,
+      title: "Focused workspace",
+      description: "The current file, tab, and task stay visible without wasting vertical space.",
+    },
+    {
+      icon: GitBranch,
+      title: "Source control first",
+      description: "Branches, commits, and repository access stay one motion away on small screens.",
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white selection:bg-primary/30 selection:text-primary overflow-x-hidden relative font-sans">
-      
-      {/* Avant-Garde Background Elements */}
-      <div className="fixed inset-0 pointer-events-none opacity-20 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] blend-overlay z-0 mix-blend-screen" />
-      <div className="fixed top-[-20%] right-[-10%] w-[50vw] h-[50vw] bg-primary/10 blur-[120px] rounded-full pointer-events-none z-0" />
-      <div className="fixed bottom-[-20%] left-[-10%] w-[40vw] h-[40vw] bg-yellow-500/10 blur-[100px] rounded-full pointer-events-none z-0" />
+    <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#050505] text-white selection:bg-primary/30 selection:text-primary">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,208,74,0.16),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.06),_transparent_28%),linear-gradient(180deg,#050505_0%,#08080a_42%,#050505_100%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent)]" />
 
-      {/* Navigation Layer */}
-      <nav className="fixed top-0 left-0 right-0 p-6 z-50 flex justify-between items-center mix-blend-difference">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="flex items-center gap-2"
-        >
-          <div className="w-8 h-8 rounded-lg bg-white text-black flex items-center justify-center font-bold font-display tracking-tighter">
-            HC
+      <div className="relative z-10 flex min-h-[100dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-[calc(env(safe-area-inset-top,0px)+0.875rem)]">
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_20px_36px_-28px_rgba(255,209,91,0.95)]">
+              <div className="absolute inset-1 rounded-[14px] bg-primary/12 blur-md" />
+              <span className="relative z-10 font-display text-sm font-bold tracking-tight text-white">HC</span>
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-white/50">Mobile Studio</p>
+              <p className="truncate font-display text-lg font-semibold tracking-tight text-white">
+                Hug<span className="text-primary">Code</span>
+              </p>
+            </div>
           </div>
-          <span className="font-display font-bold tracking-tight text-white hidden sm:block">
-            Hug<span className="text-primary/90">Code</span>
-          </span>
-        </motion.div>
 
-        <motion.button 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          onClick={onEnter}
-          className="group flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white text-white hover:text-black transition-all duration-500 backdrop-blur-md overflow-hidden relative"
-        >
-          <span className="relative z-10 font-medium text-sm tracking-wide">Enter Studio</span>
-          <ArrowUpRight className="w-4 h-4 relative z-10 transition-transform duration-500 group-hover:rotate-45 group-hover:translate-x-1 group-hover:-translate-y-1" />
-        </motion.button>
-      </nav>
-
-      {/* Hero Section */}
-      <main className="relative z-10 container mx-auto px-6 pt-[20vh] pb-32 flex flex-col items-center sm:items-start text-center sm:text-left min-h-screen">
-        <div className="max-w-5xl w-full mx-auto sm:mx-0 relative">
-          
-          <motion.div
-            initial={{ opacity: 0, filter: "blur(10px)", y: 20 }}
-            animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col gap-2"
+          <Button
+            onClick={onEnter}
+            variant="ghost"
+            className="h-11 rounded-full border border-white/10 bg-white/[0.03] px-4 text-white hover:bg-white/[0.08] hover:text-white"
           >
-            <h1 className="text-[12vw] sm:text-[8vw] leading-[0.85] font-display font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-neutral-300 to-neutral-600">
-              RETHINK.
-            </h1>
-            <h1 className="text-[12vw] sm:text-[8vw] leading-[0.85] font-display font-black tracking-tighter ml-[5vw] sm:ml-[10vw] flex items-center gap-4 text-transparent bg-clip-text bg-gradient-to-r from-primary via-yellow-400 to-amber-600">
-              CODE.
-            </h1>
-          </motion.div>
+            Enter Studio
+            <ArrowUpRight className="h-4 w-4" />
+          </Button>
+        </header>
 
-          {/* Asymmetrical Description block */}
-          <motion.div 
+        <main className="flex flex-1 flex-col gap-4 pt-5">
+          <motion.section
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="mobile-hero-surface mobile-grid-overlay rounded-[30px] p-5"
             style={{ y: yElement1 }}
-            className="mt-12 sm:mt-8 sm:ml-[25vw] sm:max-w-md lg:max-w-lg"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
           >
-            <p className="text-lg sm:text-xl text-neutral-400 leading-relaxed font-light">
-              ليس مجرد محرر نصوص. إنها بيئة تطوير ذكية تتجاوز المعايير التقليدية. 
-              تصميم طليعي، ذكاء اصطناعي مدمج، وتجربة مستخدم تركز على البساطة المتعمدة والقوة المطلقة.
-            </p>
-            
-            <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center sm:items-start">
-              <button 
-                onClick={onEnter}
-                className="w-full sm:w-auto px-8 py-4 bg-white text-black rounded-full font-medium tracking-wide hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 group"
-              >
-                Launch IDE
-                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-              </button>
-              <button 
-                onClick={onEnter}
-                className="w-full sm:w-auto px-8 py-4 bg-transparent border border-white/20 text-white rounded-full font-medium tracking-wide hover:bg-white/5 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
-              >
-                Sign In <Github className="w-4 h-4" />
-              </button>
+            <div className="relative space-y-5">
+              <div className="flex items-center justify-between gap-2">
+                <Badge
+                  variant="outline"
+                  className="border-primary/20 bg-primary/10 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-primary"
+                >
+                  AI-Native IDE
+                </Badge>
+                <span className="text-[10px] uppercase tracking-[0.22em] text-white/45">GitHub • Preview • Agent</span>
+              </div>
+
+              <div className="space-y-3">
+                <h1 className="font-display text-[2.55rem] leading-[0.92] tracking-[-0.08em] text-white">
+                  Build with
+                  <span className="block text-primary">clarity.</span>
+                </h1>
+                <p className="max-w-sm text-sm leading-6 text-white/68">
+                  A phone-first coding surface that keeps files, preview, Git, and the AI assistant in one calm flow.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {mobileHighlights.map(({ label, value, icon: Icon }) => (
+                  <Card key={label} className="mobile-quiet-surface rounded-[22px] border-white/8 bg-transparent">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <Icon className="h-4 w-4 text-primary" />
+                        <span className="text-[10px] uppercase tracking-[0.22em] text-white/35">{label}</span>
+                      </div>
+                      <p className="mt-4 text-sm font-semibold tracking-tight text-white">{value}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <div className="grid gap-2">
+                <Button
+                  onClick={onEnter}
+                  className="h-12 rounded-[18px] text-sm font-semibold shadow-[0_22px_44px_-28px_rgba(255,209,91,0.95)]"
+                >
+                  Launch IDE
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={onEnter}
+                  variant="outline"
+                  className="h-11 rounded-[18px] border-white/12 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white"
+                >
+                  Sign In with GitHub
+                  <Github className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
+          </motion.section>
+
+          <section className="grid grid-cols-2 gap-3">
+            {mobileBenefits.map(({ icon: Icon, title, description }) => (
+              <Card key={title} className="mobile-quiet-surface rounded-[26px] border-white/8 bg-transparent">
+                <CardContent className="flex h-full flex-col p-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-primary">
+                    <Icon className="h-4 w-4" />
+                  </div>
+                  <h2 className="mt-4 text-sm font-semibold tracking-tight text-white">{title}</h2>
+                  <p className="mt-2 text-[12px] leading-5 text-white/58">{description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </section>
+
+          <motion.div
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+            style={{ y: yElement2 }}
+          >
+            <Card className="mobile-quiet-surface mobile-grid-overlay overflow-hidden rounded-[30px] border-white/8 bg-transparent">
+              <CardContent className="p-0">
+                <div className="flex items-center gap-2 border-b border-white/8 px-4 py-3">
+                  <div className="flex gap-1.5">
+                    <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
+                  </div>
+                  <div className="ml-auto rounded-full border border-white/8 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-white/45">
+                    Mobile workspace
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-[92px_minmax(0,1fr)]">
+                  <div className="border-r border-white/8 px-3 py-4">
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Files</p>
+                    <div className="mt-3 space-y-2 text-[11px] text-white/55">
+                      <div className="rounded-full border border-white/8 bg-white/[0.03] px-2 py-1">src</div>
+                      <div className="rounded-full border border-primary/18 bg-primary/10 px-2 py-1 text-primary">App.tsx</div>
+                      <div className="rounded-full border border-white/8 bg-white/[0.03] px-2 py-1">preview</div>
+                    </div>
+                  </div>
+
+                  <div className="px-4 py-4">
+                    <div className="space-y-2 font-mono text-[11px] leading-5">
+                      <div>
+                        <span className="text-primary/90">const</span>{" "}
+                        <span className="text-white">workspace</span>{" "}
+                        <span className="text-white/45">=</span>{" "}
+                        <span className="text-yellow-400">{"{"}</span>
+                      </div>
+                      <div className="pl-4 text-white/70">
+                        view: <span className="text-primary">"focused"</span>,
+                      </div>
+                      <div className="pl-4 text-white/70">
+                        repo: <span className="text-primary">"connected"</span>,
+                      </div>
+                      <div className="pl-4 text-white/70">
+                        agent: <span className="text-primary">"inline"</span>,
+                      </div>
+                      <div>
+                        <span className="text-yellow-400">{"}"}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.03] p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+                          <Sparkles className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold tracking-tight text-white">AI suggestion</p>
+                          <p className="mt-1 text-[11px] leading-5 text-white/58">
+                            Keep the active file, preview, and Git status visible with less vertical noise.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </motion.div>
-
-        </div>
-
-        {/* Abstract Component Showcase */}
-        <motion.div 
-          style={{ y: yElement2 }}
-          initial={{ opacity: 0, y: 100 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.5, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full sm:absolute sm:right-0 sm:top-[40vh] sm:w-[50vw] mt-24 sm:mt-0 px-4 sm:px-0 pointer-events-none"
-        >
-          <div className="relative aspect-[4/3] w-full max-w-2xl ml-auto border border-white/10 bg-black/40 backdrop-blur-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col ring-1 ring-white/5">
-            {/* Fake Editor Header */}
-            <div className="h-10 border-b border-white/10 flex items-center px-4 gap-2 bg-white/[0.02]">
-              <div className="flex gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-              </div>
-              <div className="mx-auto px-3 py-1 bg-white/5 rounded-full text-[10px] text-white/50 tracking-widest font-mono">
-                App.tsx — HugCode
-              </div>
-            </div>
-            {/* Fake Editor Content */}
-            <div className="flex-1 p-6 font-mono text-sm sm:text-base leading-relaxed text-neutral-400">
-              <div className="text-primary/80">const</div> <div className="text-white inline">System</div> = <div className="text-yellow-400 inline">()</div> <div className="text-primary/80 inline">{"=>"}</div> {"{"} <br/>
-              &nbsp;&nbsp;<div className="text-primary/80 inline">return</div> ( <br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;{'<'} <div className="text-red-400 inline">AvantGarde</div> {'>'} <br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{'<'} <div className="text-blue-400 inline">Intelligence</div> {'>'} Unbound {'</'} <div className="text-blue-400 inline">Intelligence</div> {'>'} <br/>
-              &nbsp;&nbsp;&nbsp;&nbsp;{'</'} <div className="text-red-400 inline">AvantGarde</div> {'>'} <br/>
-              &nbsp;&nbsp;) <br/>
-              {"}"}; <br/>
-              <motion.div 
-                animate={{ opacity: [1, 0] }} 
-                transition={{ duration: 0.8, repeat: Infinity, ease: "linear", repeatType: "reverse" }} 
-                className="inline-block w-2.5 h-4 bg-white/80 mt-2" 
-              />
-            </div>
-            
-            {/* Fake AI popup overlay floating */}
-            <div className="absolute bottom-6 right-6 p-4 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl flex items-start gap-3 w-64 translate-x-4 translate-y-4 -rotate-3">
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
-                <Sparkles className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <p className="text-white text-xs font-medium mb-1">AI Recommendation</p>
-                <p className="text-neutral-400 text-[10px] leading-tight">Optimized layout calculation to 60fps native thread boundary.</p>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </main>
-
-      {/* Avant-garde Grid Section */}
-      <section className="relative z-10 py-32 border-t border-white/10 bg-black">
-        <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-16 gap-x-8">
-            <div className="flex flex-col">
-              <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-6">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-2xl font-display font-bold mb-4 tracking-tight">Performant</h3>
-              <p className="text-neutral-500 font-light leading-relaxed">
-                مبني للسرعة. عزل خيوط المعالجة في التطبيق للحفاظ على سلاسة 60 إطاراً في الثانية. لا مساومة في الأداء.
-              </p>
-            </div>
-            <div className="flex flex-col sm:mt-16">
-              <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-6">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-2xl font-display font-bold mb-4 tracking-tight">Intelligent</h3>
-              <p className="text-neutral-500 font-light leading-relaxed">
-                ذكاء اصطناعي متغلغل في كل زاوية. ليس كملحق، بل كجوهر للبيئة ليقرأ، يخطط، ويكتب الكود معك.
-              </p>
-            </div>
-            <div className="flex flex-col sm:mt-32">
-              <div className="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center mb-6">
-                <Code2 className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-2xl font-display font-bold mb-4 tracking-tight">Aesthetic</h3>
-              <p className="text-neutral-500 font-light leading-relaxed">
-                تصميم يكسر القواعد. مساحات بيضاء متعمدة وتأثيرات بصرية تضع التركيز على الكود بأسلوب غير مسبوق.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer minimal */}
-      <footer className="py-8 border-t border-white/5 text-center text-neutral-600 text-sm font-mono tracking-widest relative z-10 bg-black">
-        © {new Date().getFullYear()} HUGCODE INTELLIGENCE.
-      </footer>
+        </main>
+      </div>
     </div>
   );
 };

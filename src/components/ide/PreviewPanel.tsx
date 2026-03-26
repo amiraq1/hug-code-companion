@@ -2,16 +2,18 @@ import { useEffect } from "react";
 import {
   ZoomIn,
   ZoomOut,
-  RotateCcw,
   Maximize2,
   Minimize2,
   AlertTriangle,
   XCircle,
   Trash2,
   Eye,
+  Shield,
+  TerminalSquare,
 } from "lucide-react";
 import type { FileNode } from "@/stores/editorStore";
 import { usePreview } from "@/hooks/usePreview";
+import { Switch } from "@/components/ui/switch";
 
 interface PreviewPanelProps {
   file: FileNode | null;
@@ -24,12 +26,14 @@ export function PreviewPanel({ file }: PreviewPanelProps) {
     isFullscreen,
     errors,
     warnings,
+    scriptExecutionEnabled,
     clearErrors,
     injectPreview,
     zoomIn,
     zoomOut,
     resetZoom,
     toggleFullscreen,
+    toggleScriptExecution,
   } = usePreview();
 
   // Re-inject on file change
@@ -41,26 +45,41 @@ export function PreviewPanel({ file }: PreviewPanelProps) {
 
   return (
     <div
-      className={`flex flex-col bg-ide-editor/90 backdrop-blur-xl border-l border-border/80 shadow-2xl transition-all duration-300 ${isFullscreen
+      className={`flex flex-col bg-ide-editor/90 backdrop-blur-xl border-t border-border/80 md:border-t-0 md:border-l shadow-2xl transition-all duration-300 ${isFullscreen
         ? "fixed inset-0 z-50"
         : "h-full"
         }`}
     >
       {/* Toolbar */}
-      <div className="h-9 shrink-0 flex items-center justify-between px-3 border-b border-border bg-ide-sidebar/50">
-        <div className="flex items-center gap-1.5">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-border bg-ide-sidebar/50">
+        <div className="flex min-w-0 items-center gap-1.5">
           <Eye className="h-3.5 w-3.5 text-primary" />
           <span className="text-[11px] font-mono font-bold text-foreground/80 tracking-widest uppercase">
             Preview
           </span>
           {file && (
-            <span className="text-[10px] text-muted-foreground/50 ml-1 truncate max-w-[120px]">
+            <span className="ml-1 truncate text-[10px] text-muted-foreground/50 max-w-[96px] sm:max-w-[120px]">
               {file.name}
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-0.5">
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          <div className="mr-1 hidden sm:flex items-center gap-2 rounded-full border border-border/60 bg-background/50 px-2 py-1">
+            <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+              {scriptExecutionEnabled ? (
+                <TerminalSquare className="h-3 w-3 text-primary" />
+              ) : (
+                <Shield className="h-3 w-3 text-emerald-400" />
+              )}
+              <span>{scriptExecutionEnabled ? "Scripts" : "Safe"}</span>
+            </div>
+            <Switch
+              checked={scriptExecutionEnabled}
+              onCheckedChange={toggleScriptExecution}
+              aria-label="Toggle script execution in preview"
+            />
+          </div>
           {hasIssues && (
             <button
               onClick={clearErrors}
@@ -80,7 +99,7 @@ export function PreviewPanel({ file }: PreviewPanelProps) {
             </button>
             <button
               onClick={resetZoom}
-              className="px-1.5 py-0.5 rounded hover:bg-secondary/60 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[36px] text-center"
+              className="min-w-[32px] rounded px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground text-center transition-colors hover:bg-secondary/60 hover:text-foreground sm:min-w-[36px] sm:text-[10px]"
               title="Reset zoom"
             >
               {zoom}%
@@ -124,7 +143,7 @@ export function PreviewPanel({ file }: PreviewPanelProps) {
           <iframe
             ref={iframeRef}
             title="Live Preview"
-            sandbox="allow-scripts"
+            sandbox={scriptExecutionEnabled ? "allow-scripts" : ""}
             className="w-full h-full border-0 bg-[#0d0d0d]"
             style={{
               transform: `scale(${zoom / 100})`,

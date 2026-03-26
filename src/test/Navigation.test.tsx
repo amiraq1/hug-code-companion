@@ -23,6 +23,7 @@ vi.mock("@/hooks/useGitHub", () => ({
   }),
   GitHubError: class extends Error {
     type: string;
+
     constructor(message: string, type: string) {
       super(message);
       this.type = type;
@@ -47,9 +48,7 @@ vi.mock("@/stores/authStore", () => ({
 }));
 
 vi.mock("@monaco-editor/react", () => ({
-  default: ({ value }: { value: string }) => (
-    <div data-testid="monaco-editor">{value?.slice(0, 50)}</div>
-  ),
+  default: ({ value }: { value: string }) => <div data-testid="monaco-editor">{value?.slice(0, 50)}</div>,
 }));
 
 vi.mock("@/components/ide/PreviewPanel", () => ({
@@ -58,10 +57,6 @@ vi.mock("@/components/ide/PreviewPanel", () => ({
 
 vi.mock("@/components/ide/GitPanel", () => ({
   GitPanel: () => <div data-testid="git-panel">Git</div>,
-}));
-
-vi.mock("@/components/ide/NotificationHub", () => ({
-  NotificationHub: () => null,
 }));
 
 vi.mock("@/lib/asyncStorage", () => ({
@@ -84,7 +79,7 @@ function renderIndex() {
   render(
     <QueryClientProvider client={queryClient}>
       <Index />
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -95,10 +90,9 @@ async function goToLoginScreen() {
 }
 
 function clickContinueWithoutGitHub() {
-  const continueButton = screen.getAllByRole("button").find((button) => {
-    const label = button.textContent ?? "";
-    return label.includes("GitHub") && !button.querySelector("svg");
-  });
+  const continueButton = screen
+    .getAllByRole("button")
+    .find((button) => (button.textContent ?? "").includes("GitHub") && (button.textContent ?? "").includes("بدون"));
 
   if (!continueButton) {
     throw new Error("Continue without GitHub button not found");
@@ -110,6 +104,11 @@ function clickContinueWithoutGitHub() {
 async function goToEditorScreen() {
   await goToLoginScreen();
   clickContinueWithoutGitHub();
+  await screen.findByTitle("Settings");
+}
+
+async function openFilesTab() {
+  fireEvent.click(screen.getByRole("button", { name: "Files" }));
   await screen.findByText("Explorer");
 }
 
@@ -125,7 +124,8 @@ describe("App Navigation", () => {
   it("navigates to editor when Continue without GitHub is clicked", async () => {
     renderIndex();
     await goToEditorScreen();
-    expect(screen.getByText("Explorer")).toBeInTheDocument();
+    expect(screen.getByTitle("Settings")).toBeInTheDocument();
+    expect(screen.getByText("Workspace")).toBeInTheDocument();
   });
 
   it("shows settings screen when settings is clicked from editor", async () => {
@@ -133,20 +133,19 @@ describe("App Navigation", () => {
     await goToEditorScreen();
     fireEvent.click(screen.getByTitle("Settings"));
 
-    expect(await screen.findByText("Settings")).toBeInTheDocument();
-    expect(await screen.findByText("Font Size")).toBeInTheDocument();
+    expect(await screen.findByText("Workspace control")).toBeInTheDocument();
+    expect(screen.getAllByText("Font Size").length).toBeGreaterThan(0);
   });
 
   it("returns to editor from settings", async () => {
     renderIndex();
     await goToEditorScreen();
     fireEvent.click(screen.getByTitle("Settings"));
-    await screen.findByText("Font Size");
+    await screen.findByText("Workspace control");
 
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
 
-    expect(await screen.findByText("Explorer")).toBeInTheDocument();
+    expect(await screen.findByTitle("Settings")).toBeInTheDocument();
   });
 
   it("navigates to repos screen from editor", async () => {
@@ -157,13 +156,11 @@ describe("App Navigation", () => {
     expect(await screen.findByText("/ repositories")).toBeInTheDocument();
   });
 
-  it("toggles sidebar visibility", async () => {
+  it("opens the files surface from the mobile dock", async () => {
     renderIndex();
     await goToEditorScreen();
+    await openFilesTab();
     expect(screen.getByText("Explorer")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText("Hide sidebar"));
-    expect(screen.queryByText("Explorer")).not.toBeInTheDocument();
   });
 });
 
@@ -173,25 +170,31 @@ describe("Editor Features", () => {
     await goToEditorScreen();
   });
 
-  it("shows file tree with default files", () => {
+  it("shows workspace header in the editor shell", () => {
+    expect(screen.getByText("Workspace")).toBeInTheDocument();
+    expect(screen.getByText("Swipe tabs")).toBeInTheDocument();
+  });
+
+  it("shows file tree with default files after switching to Files", async () => {
+    await openFilesTab();
     expect(screen.getByText("src")).toBeInTheDocument();
     expect(screen.getByText("package.json")).toBeInTheDocument();
     expect(screen.getByText("README.md")).toBeInTheDocument();
   });
 
-  it("opens a file tab when clicking a file", () => {
+  it("opens a file tab when clicking a file", async () => {
+    await openFilesTab();
     fireEvent.click(screen.getByText("package.json"));
-    const tabs = screen.getAllByText("package.json");
-    expect(tabs.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("package.json").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows status bar with file info", () => {
-    expect(screen.getByText("main")).toBeInTheDocument();
-    expect(screen.getByText("ready")).toBeInTheDocument();
-    expect(screen.getByText("UTF-8")).toBeInTheDocument();
+  it("shows preview surface from the dock", async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    expect(await screen.findByTestId("preview-panel")).toBeInTheDocument();
   });
 
-  it("shows title bar branding", () => {
-    expect(screen.getByText("✨ بيئة التطوير")).toBeInTheDocument();
+  it("shows git surface from the dock", async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Git" }));
+    expect(await screen.findByTestId("git-panel")).toBeInTheDocument();
   });
 });

@@ -72,25 +72,27 @@ describe("editorStore", () => {
       expect(getFileIcon("App.tsx")).toBe("typescript");
     });
 
-    it("returns json for .json files", () => {
-      expect(getFileIcon("package.json")).toBe("json");
+    it("returns package for package manifests", () => {
+      expect(getFileIcon("package.json")).toBe("package");
     });
 
     it("returns markdown for .md files", () => {
       expect(getFileIcon("README.md")).toBe("markdown");
     });
 
-    it("returns css for .css files", () => {
-      expect(getFileIcon("styles.css")).toBe("css");
+    it("returns styles for .css files", () => {
+      expect(getFileIcon("styles.css")).toBe("styles");
     });
 
     it("returns html for .html files", () => {
-      expect(getFileIcon("index.html")).toBe("html");
+      expect(getFileIcon("index.html")).toBe("markup");
     });
 
-    it("returns file for unknown extensions", () => {
-      expect(getFileIcon("data.txt")).toBe("file");
-      expect(getFileIcon("config.yml")).toBe("file");
+    it("returns refined kinds for common non-code files", () => {
+      expect(getFileIcon("data.txt")).toBe("text");
+      expect(getFileIcon("config.yml")).toBe("yaml");
+      expect(getFileIcon("package-lock.json")).toBe("package");
+      expect(getFileIcon(".gitignore")).toBe("git");
       expect(getFileIcon("noext")).toBe("file");
     });
   });

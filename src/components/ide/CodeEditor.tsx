@@ -22,6 +22,10 @@ function getMonacoLanguage(lang?: string): string {
     case "rust": return "rust";
     case "go": return "go";
     case "yaml": return "yaml";
+    case "shell": return "shell";
+    case "sql": return "sql";
+    case "xml": return "xml";
+    case "dockerfile": return "dockerfile";
     default: return "plaintext";
   }
 }

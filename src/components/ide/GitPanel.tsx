@@ -81,7 +81,7 @@ const CommitItem = memo(function CommitItem({ commit, isFirst, isLast, onViewDif
             {onViewDiff && (
               <button
                 onClick={() => onViewDiff(commit.sha)}
-                className="text-[10px] text-primary/60 hover:text-primary transition-colors opacity-0 group-hover:opacity-100 flex items-center gap-0.5"
+                className="flex items-center gap-0.5 text-[10px] text-primary/60 transition-colors opacity-100 hover:text-primary md:opacity-0 md:group-hover:opacity-100"
               >
                 <Eye className="h-2.5 w-2.5" />
                 diff
@@ -490,7 +490,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
                   <span className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-medium">HEAD</span>
                 )}
                 {b.name !== activeBranch && (
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                     <button
                       onClick={(e) => { e.stopPropagation(); setMergingFrom(b.name); }}
                       className="p-0.5 rounded hover:bg-ide-info/20 text-muted-foreground hover:text-ide-info transition-colors"

@@ -119,10 +119,15 @@ android {
     def enableAbiSplitsConfig = (project.findProperty("ENABLE_ABI_SPLITS") ?: System.getenv("ENABLE_ABI_SPLITS") ?: "true").toBoolean()
     def requestedTasks = gradle.startParameter.taskNames.collect { it.toLowerCase() }
     def buildingBundle = requestedTasks.any { it.contains("bundle") }
-    def enableAbiSplits = enableAbiSplitsConfig && !buildingBundle
+    def buildingDebug = requestedTasks.any { it.contains("debug") }
+    def enableAbiSplits = enableAbiSplitsConfig && !buildingBundle && !buildingDebug
 
     if (buildingBundle && enableAbiSplitsConfig) {
         logger.lifecycle("Bundle task detected: disabling ABI splits to avoid AAB packaging conflicts.")
+    }
+
+    if (buildingDebug && enableAbiSplitsConfig) {
+        logger.lifecycle("Debug task detected: disabling ABI splits for faster device deployment and live reload.")
     }
 
     splits {

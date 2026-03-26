@@ -1,11 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import {
-  SettingsScreen,
-} from "@/components/screens/SettingsScreen";
+
+import { SettingsScreen } from "@/components/screens/SettingsScreen";
 import { DEFAULT_EDITOR_SETTINGS } from "@/components/screens/settings.types";
 
-// Mock useGitHub
 vi.mock("@/hooks/useGitHub", () => ({
   useGitHub: () => ({
     connected: true,
@@ -33,17 +31,17 @@ describe("SettingsScreen", () => {
     onSettingsChange: vi.fn(),
   };
 
-  it("renders Settings header", () => {
+  it("renders the settings shell", () => {
     render(<SettingsScreen {...defaultProps} />);
-    expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.getByText("Preferences")).toBeInTheDocument();
+    expect(screen.getAllByText("Settings").length).toBeGreaterThan(0);
   });
 
-  it("renders Editor tab and its content by default", () => {
+  it("renders editor controls by default", () => {
     render(<SettingsScreen {...defaultProps} />);
-    // "Editor" appears as tab + heading
-    expect(screen.getAllByText("Editor")).toHaveLength(2);
-    expect(screen.getByText("Font Size")).toBeInTheDocument();
-    expect(screen.getByText("Tab Size")).toBeInTheDocument();
+    expect(screen.getByText("Workspace control")).toBeInTheDocument();
+    expect(screen.getAllByText("Font Size").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Tab Size").length).toBeGreaterThan(0);
     expect(screen.getByText("Word Wrap")).toBeInTheDocument();
   });
 
@@ -65,9 +63,7 @@ describe("SettingsScreen", () => {
   it("calls onBack when back button is clicked", () => {
     const onBack = vi.fn();
     render(<SettingsScreen {...defaultProps} onBack={onBack} />);
-    // The back button is the first button (ArrowLeft)
-    const buttons = screen.getAllByRole("button");
-    fireEvent.click(buttons[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(onBack).toHaveBeenCalledOnce();
   });
 
@@ -80,18 +76,14 @@ describe("SettingsScreen", () => {
     const onSettingsChange = vi.fn();
     render(<SettingsScreen {...defaultProps} onSettingsChange={onSettingsChange} />);
     fireEvent.click(screen.getByText("+"));
-    expect(onSettingsChange).toHaveBeenCalledWith(
-      expect.objectContaining({ fontSize: 14 })
-    );
+    expect(onSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ fontSize: 14 }));
   });
 
-  it("calls onSettingsChange when font size − is clicked", () => {
+  it("calls onSettingsChange when font size - is clicked", () => {
     const onSettingsChange = vi.fn();
     render(<SettingsScreen {...defaultProps} onSettingsChange={onSettingsChange} />);
-    fireEvent.click(screen.getByText("−"));
-    expect(onSettingsChange).toHaveBeenCalledWith(
-      expect.objectContaining({ fontSize: 12 })
-    );
+    fireEvent.click(screen.getByText("-"));
+    expect(onSettingsChange).toHaveBeenCalledWith(expect.objectContaining({ fontSize: 12 }));
   });
 
   it("renders all three tab buttons", () => {

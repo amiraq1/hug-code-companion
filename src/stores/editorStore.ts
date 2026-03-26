@@ -1,3 +1,5 @@
+import { getFileKind } from "@/lib/fileMeta";
+
 export interface FileNode {
   name: string;
   path: string;
@@ -158,10 +160,5 @@ export function flattenFiles(nodes: FileNode[]): FileNode[] {
 }
 
 export function getFileIcon(name: string): string {
-  if (name.endsWith(".tsx") || name.endsWith(".ts")) return "typescript";
-  if (name.endsWith(".json")) return "json";
-  if (name.endsWith(".md")) return "markdown";
-  if (name.endsWith(".css")) return "css";
-  if (name.endsWith(".html")) return "html";
-  return "file";
+  return getFileKind(name);
 }

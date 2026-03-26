@@ -1,7 +1,22 @@
 import { useState, useMemo, useCallback } from "react";
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen, FileJson, FileCode2, FileType, FileText, Image as ImageIcon } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronDown,
+  Database,
+  File,
+  Folder,
+  FolderOpen,
+  FileJson,
+  FileCode2,
+  FileType,
+  FileText,
+  Image as ImageIcon,
+  Package,
+  TerminalSquare,
+} from "lucide-react";
 import type { FileNode } from "@/stores/editorStore";
 import { NativeFlatList } from "@/components/native/NativeFlatList";
+import { getFileMeta } from "@/lib/fileMeta";
 
 interface FileExplorerProps {
   files: FileNode[];
@@ -14,33 +29,38 @@ type FlattenedFileNode = {
   depth: number;
 };
 
-const getFileColor = (name: string) => {
-  if (name.endsWith(".tsx") || name.endsWith(".ts")) return "text-ide-info";
-  if (name.endsWith(".json")) return "text-primary/60";
-  if (name.endsWith(".md")) return "text-foreground/50";
-  if (name.endsWith(".css")) return "text-accent/60";
-  return "text-muted-foreground";
-};
-
-const getFileIcon = (name: string, colorClass: string) => {
-  const ext = name.split('.').pop()?.toLowerCase();
+const renderFileIcon = (name: string, language: string | undefined, colorClass: string) => {
+  const { kind } = getFileMeta(name, language);
   const props = { className: `h-4 w-4 shrink-0 ${colorClass}` };
 
-  switch (ext) {
-    case 'json': return <FileJson {...props} />;
-    case 'ts':
-    case 'tsx':
-    case 'js':
-    case 'jsx': return <FileCode2 {...props} />;
-    case 'css':
-    case 'scss': return <FileType {...props} />;
-    case 'md':
-    case 'txt': return <FileText {...props} />;
-    case 'png':
-    case 'jpg':
-    case 'jpeg':
-    case 'svg': return <ImageIcon {...props} />;
-    default: return <File {...props} />;
+  switch (kind) {
+    case "package":
+      return <Package {...props} />;
+    case "json":
+      return <FileJson {...props} />;
+    case "typescript":
+    case "javascript":
+    case "python":
+    case "rust":
+    case "go":
+      return <FileCode2 {...props} />;
+    case "styles":
+    case "markup":
+    case "config":
+    case "yaml":
+      return <FileType {...props} />;
+    case "shell":
+      return <TerminalSquare {...props} />;
+    case "markdown":
+    case "text":
+    case "git":
+      return <FileText {...props} />;
+    case "image":
+      return <ImageIcon {...props} />;
+    case "database":
+      return <Database {...props} />;
+    default:
+      return <File {...props} />;
   }
 };
 
@@ -95,7 +115,7 @@ export function FileExplorer({ files, activeFile, onFileSelect }: FileExplorerPr
       const { node, depth } = item;
       const isExpanded = expandedFolders.has(node.path);
       const isActive = activeFile === node.path;
-      const fileColor = getFileColor(node.name);
+      const fileColor = getFileMeta(node.name, node.language).accentClass;
 
       if (node.type === "folder") {
         return (
@@ -128,7 +148,7 @@ export function FileExplorer({ files, activeFile, onFileSelect }: FileExplorerPr
             }`}
           style={{ paddingLeft: `${depth * 14 + 22}px` }}
         >
-          {getFileIcon(node.name, isActive ? 'text-primary' : fileColor)}
+          {renderFileIcon(node.name, node.language, isActive ? "text-primary" : fileColor)}
           <span className="truncate">{node.name}</span>
         </button>
       );
