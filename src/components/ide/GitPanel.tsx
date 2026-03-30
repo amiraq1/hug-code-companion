@@ -31,11 +31,11 @@ interface GitPanelProps {
 
 /** Diff patch viewer */
 const DiffViewer = memo(function DiffViewer({ patch, filename }: { patch: string; filename: string }) {
-  if (!patch) return <p className="text-[10px] text-muted-foreground px-3 py-1">No diff available</p>;
+  if (!patch) return <p className="text-[10px] text-muted-foreground px-3 py-1">لا توجد فروقات متاحة</p>;
 
   const lines = patch.split("\n");
   return (
-    <div className="font-mono text-[10px] leading-relaxed overflow-x-auto">
+    <div className="font-mono text-[10px] leading-relaxed overflow-x-auto text-right" dir="ltr">
       {lines.map((line, i) => {
         let bgClass = "";
         let textClass = "text-foreground/70";
@@ -68,14 +68,14 @@ const CommitItem = memo(function CommitItem({ commit, isFirst, isLast, onViewDif
 }) {
   return (
     <div className="px-3 py-2 border-b border-border/30 hover:bg-secondary/20 transition-colors group">
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2 flex-row-reverse">
         <div className="mt-1.5 shrink-0 flex flex-col items-center">
           <div className={`w-2 h-2 rounded-full ${isFirst ? "bg-primary" : "bg-muted-foreground/30"}`} />
           {!isLast && <div className="w-px h-6 bg-border mt-0.5" />}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 text-right">
           <p className="text-xs text-foreground leading-snug line-clamp-2">{commit.commit.message}</p>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex items-center gap-2 mt-1 flex-row-reverse">
             <span className="text-[10px] text-muted-foreground font-mono">{commit.sha.slice(0, 7)}</span>
             <span className="text-[10px] text-muted-foreground">{commit.author?.login || commit.commit.author.name}</span>
             {onViewDiff && (
@@ -84,10 +84,10 @@ const CommitItem = memo(function CommitItem({ commit, isFirst, isLast, onViewDif
                 className="flex items-center gap-0.5 text-[10px] text-primary/60 transition-colors opacity-100 hover:text-primary md:opacity-0 md:group-hover:opacity-100"
               >
                 <Eye className="h-2.5 w-2.5" />
-                diff
+                فروقات
               </button>
             )}
-            <span className="text-[10px] text-muted-foreground ml-auto flex items-center gap-1">
+            <span className="text-[10px] text-muted-foreground mr-auto flex items-center gap-1 flex-row-reverse">
               <Clock className="h-2.5 w-2.5" />
               {formatRelativeTime(commit.commit.author.date)}
             </span>
@@ -196,7 +196,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
         }
       }
     } catch (e: unknown) {
-      const msg = e instanceof GitHubError ? e.message : "Failed to load data";
+      const msg = e instanceof GitHubError ? e.message : "فشل في تحميل البيانات";
       setError(msg);
     }
     setLoading(false);
@@ -213,10 +213,10 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
     try {
       await createBranch(selectedRepo.owner, selectedRepo.repo, newBranchName.trim(), activeBranch);
       setNewBranchName("");
-      setSuccessMsg(`Branch "${newBranchName.trim()}" created`);
+      setSuccessMsg(`تم إنشاء الفرع "${newBranchName.trim()}"`);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof GitHubError ? e.message : "Failed to create branch");
+      setError(e instanceof GitHubError ? e.message : "فشل في إنشاء الفرع");
     }
     setCreatingBranch(false);
   };
@@ -226,10 +226,10 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
     setError(null);
     try {
       await deleteBranch(selectedRepo.owner, selectedRepo.repo, branch);
-      setSuccessMsg(`Branch "${branch}" deleted`);
+      setSuccessMsg(`تم حذف الفرع "${branch}"`);
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof GitHubError ? e.message : "Failed to delete branch");
+      setError(e instanceof GitHubError ? e.message : "فشل في حذف الفرع");
     }
   };
 
@@ -242,12 +242,12 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
       if (result?.error === "merge_conflict") {
         setError("⚠️ تعارض في الدمج! يرجى حل التعارضات يدوياً على GitHub.");
       } else {
-        setSuccessMsg(`Merged "${head}" into "${activeBranch}"`);
+        setSuccessMsg(`تم دمج "${head}" في "${activeBranch}"`);
         setMergingFrom(null);
       }
       await refresh();
     } catch (e: unknown) {
-      setError(e instanceof GitHubError ? e.message : "Merge failed");
+      setError(e instanceof GitHubError ? e.message : "فشل الدمج");
     }
     setMerging(false);
   };
@@ -261,9 +261,9 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
       const data = await getCommitDiff(selectedRepo.owner, selectedRepo.repo, sha);
       setDiffFiles(data.files || []);
       setDiffSummary(null);
-      setDiffSource(`commit ${sha.slice(0, 7)}`);
+      setDiffSource(`التغيير ${sha.slice(0, 7)}`);
     } catch (e: unknown) {
-      setError(e instanceof GitHubError ? e.message : "Failed to load diff");
+      setError(e instanceof GitHubError ? e.message : "فشل في تحميل الفروقات");
     }
     setLoading(false);
   };
@@ -285,20 +285,20 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
 
   if (!connected) {
     return (
-      <div className="h-full bg-ide-panel flex flex-col items-center justify-center px-6 text-center gap-4">
+      <div className="h-full bg-ide-panel flex flex-col items-center justify-center px-6 text-center gap-4" dir="rtl">
         <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
           <Github className="h-6 w-6 text-foreground" />
         </div>
         <div>
-          <p className="text-sm font-medium text-foreground mb-1">Connect GitHub</p>
-          <p className="text-xs text-muted-foreground">Connect to manage branches, view history, and track changes.</p>
+          <p className="text-sm font-medium text-foreground mb-1">ربط حساب GitHub</p>
+          <p className="text-xs text-muted-foreground">اربط حسابك لإدارة الفروع، عرض التغييرات، ومتابعة سجل العمل.</p>
         </div>
         <button
           onClick={connect}
           className="px-4 py-2 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90 transition-opacity flex items-center gap-2"
         >
           <Github className="h-4 w-4" />
-          Connect
+          اتصال
         </button>
       </div>
     );
@@ -315,19 +315,19 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
   };
 
   const tabs: { id: GitTab; label: string; icon: React.ReactNode }[] = [
-    { id: "status", label: "Status", icon: <CheckCircle2 className="h-3 w-3" /> },
-    { id: "branches", label: "Branches", icon: <GitBranch className="h-3 w-3" /> },
-    { id: "log", label: "Log", icon: <GitCommitHorizontal className="h-3 w-3" /> },
-    { id: "diff", label: "Diff", icon: <GitCompare className="h-3 w-3" /> },
+    { id: "status", label: "الحالة", icon: <CheckCircle2 className="h-3 w-3" /> },
+    { id: "branches", label: "الفروع", icon: <GitBranch className="h-3 w-3" /> },
+    { id: "log", label: "السجل", icon: <GitCommitHorizontal className="h-3 w-3" /> },
+    { id: "diff", label: "الفروقات", icon: <GitCompare className="h-3 w-3" /> },
   ];
 
   return (
-    <div className="h-full bg-ide-panel flex flex-col">
+    <div className="h-full bg-ide-panel flex flex-col" dir="rtl">
       {/* Offline banner */}
       {!online && (
         <div className="px-3 py-1.5 bg-destructive/10 border-b border-destructive/20 flex items-center gap-2 shrink-0">
           <WifiOff className="h-3 w-3 text-destructive" />
-          <span className="text-[10px] text-destructive font-medium">Offline</span>
+          <span className="text-[10px] text-destructive font-medium">أوفلاين</span>
         </div>
       )}
 
@@ -343,7 +343,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
       <div className="px-3 py-2 border-b border-border flex items-center gap-2 shrink-0">
         <GitBranch className="h-3.5 w-3.5 text-primary" />
         <span className="text-[11px] font-mono text-muted-foreground uppercase tracking-wider">Git</span>
-        <span className="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-ide-success/15 text-ide-success font-medium">
+        <span className="mr-auto text-[10px] px-1.5 py-0.5 rounded bg-ide-success/15 text-ide-success font-medium">
           @{username}
         </span>
       </div>
@@ -354,18 +354,18 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
           onClick={() => setRepoDropdownOpen(!repoDropdownOpen)}
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md bg-secondary/50 hover:bg-secondary transition-colors text-sm"
         >
-          <span className="truncate text-foreground flex-1 text-left font-mono text-xs">
-            {selectedRepo ? `${selectedRepo.owner}/${selectedRepo.repo}` : "Select repository..."}
+          <span className="truncate text-foreground flex-1 text-right font-mono text-xs">
+            {selectedRepo ? `${selectedRepo.owner}/${selectedRepo.repo}` : "اختر مستودعاً..."}
           </span>
           <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
         </button>
         {repoDropdownOpen && (
-          <div className="absolute top-full left-3 right-3 z-50 mt-1 bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto">
+          <div className="absolute top-full right-3 left-3 z-50 mt-1 bg-popover border border-border rounded-lg shadow-xl max-h-48 overflow-y-auto">
             {repos.map((repo) => (
               <button
                 key={repo.id}
                 onClick={() => handleSelectRepo(repo)}
-                className="w-full text-left px-3 py-2 hover:bg-secondary/50 transition-colors text-xs font-mono truncate text-foreground"
+                className="w-full text-right px-3 py-2 hover:bg-secondary/50 transition-colors text-xs font-mono truncate text-foreground"
               >
                 {repo.full_name}
               </button>
@@ -393,7 +393,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
           onClick={refresh}
           disabled={!online}
           className="px-2 py-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
-          title="Refresh"
+          title="تحديث"
         >
           <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
         </button>
@@ -404,7 +404,7 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
         <div className="px-3 py-2 bg-destructive/10 border-b border-destructive/20 flex items-center gap-2 shrink-0">
           <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
           <span className="text-[11px] text-destructive truncate">{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto">
+          <button onClick={() => setError(null)} className="mr-auto">
             <XCircle className="h-3 w-3 text-destructive/60 hover:text-destructive" />
           </button>
         </div>
@@ -420,27 +420,27 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
 
         {!loading && !selectedRepo && (
           <div className="flex items-center justify-center py-8">
-            <p className="text-xs text-muted-foreground">Select a repository above</p>
+            <p className="text-xs text-muted-foreground">اختر مستودعاً أعلاه</p>
           </div>
         )}
 
         {/* STATUS TAB */}
         {!loading && selectedRepo && tab === "status" && (
           <div className="py-1">
-            <div className="px-3 py-2 flex items-center gap-2 border-b border-border/50">
+            <div className="px-3 py-2 flex items-center gap-2 border-b border-border/50 flex-row-reverse">
               <GitBranch className="h-3 w-3 text-primary" />
               <span className="text-xs font-mono text-foreground">{activeBranch}</span>
             </div>
             {statusFiles.length === 0 ? (
               <div className="px-3 py-6 text-center">
                 <CheckCircle2 className="h-6 w-6 text-ide-success mx-auto mb-2 opacity-40" />
-                <p className="text-xs text-muted-foreground">Working tree clean</p>
+                <p className="text-xs text-muted-foreground">لا توجد تغييرات معلقة</p>
               </div>
             ) : (
               statusFiles.map((f, i) => (
-                <div key={i} className="px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors">
+                <div key={i} className="px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors flex-row-reverse">
                   {statusIcon(f.status)}
-                  <span className="text-xs font-mono text-foreground truncate flex-1">{f.filename}</span>
+                  <span className="text-xs font-mono text-foreground truncate flex-1 text-right" dir="ltr">{f.filename}</span>
                   <span className="text-[10px] text-ide-success">+{f.additions}</span>
                   <span className="text-[10px] text-destructive">-{f.deletions}</span>
                 </div>
@@ -453,55 +453,55 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
         {!loading && selectedRepo && tab === "branches" && (
           <div className="py-1">
             {/* Create branch */}
-            <div className="px-3 py-2 border-b border-border/50 flex gap-1.5">
+            <div className="px-3 py-2 border-b border-border/50 flex gap-1.5 flex-row-reverse">
               <input
                 value={newBranchName}
                 onChange={(e) => setNewBranchName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreateBranch()}
-                placeholder="new-branch-name"
-                className="flex-1 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                placeholder="اسم الفرع الجديد"
+                className="flex-1 bg-secondary border border-border rounded px-2 py-1 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary text-right"
               />
               <button
                 onClick={handleCreateBranch}
                 disabled={creatingBranch || !newBranchName.trim() || !online}
                 className="p-1.5 rounded bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-40 transition-colors"
-                title="Create branch"
+                title="إنشاء فرع"
               >
                 {creatingBranch ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
               </button>
             </div>
-            <div className="px-3 py-1 text-[10px] text-muted-foreground">
-              from <span className="text-foreground">{activeBranch}</span>
+            <div className="px-3 py-1 text-[10px] text-muted-foreground text-right">
+              من <span className="text-foreground">{activeBranch}</span>
             </div>
 
             {/* Branch list */}
             {branches.map((b) => (
               <div
                 key={b.name}
-                className={`px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors cursor-pointer group ${b.name === activeBranch ? "bg-primary/5" : ""
+                className={`px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors cursor-pointer group flex-row-reverse ${b.name === activeBranch ? "bg-primary/5" : ""
                   }`}
                 onClick={() => setActiveBranch(b.name)}
               >
                 <GitBranch className={`h-3 w-3 shrink-0 ${b.name === activeBranch ? "text-primary" : "text-muted-foreground"}`} />
-                <span className={`text-xs font-mono truncate flex-1 ${b.name === activeBranch ? "text-primary font-medium" : "text-foreground"}`}>
+                <span className={`text-xs font-mono truncate flex-1 text-right ${b.name === activeBranch ? "text-primary font-medium" : "text-foreground"}`}>
                   {b.name}
                 </span>
                 {b.name === activeBranch && (
                   <span className="text-[9px] px-1 py-0.5 rounded bg-primary/15 text-primary font-medium">HEAD</span>
                 )}
                 {b.name !== activeBranch && (
-                  <div className="flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+                  <div className="flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 flex-row-reverse">
                     <button
                       onClick={(e) => { e.stopPropagation(); setMergingFrom(b.name); }}
                       className="p-0.5 rounded hover:bg-ide-info/20 text-muted-foreground hover:text-ide-info transition-colors"
-                      title={`Merge ${b.name} into ${activeBranch}`}
+                      title={`دمج ${b.name} في ${activeBranch}`}
                     >
                       <GitMerge className="h-2.5 w-2.5" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteBranch(b.name); }}
                       className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                      title="Delete branch"
+                      title="حذف الفرع"
                     >
                       <Trash2 className="h-2.5 w-2.5" />
                     </button>
@@ -512,24 +512,24 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
 
             {/* Merge confirmation */}
             {mergingFrom && (
-              <div className="mx-3 mt-2 p-2 rounded-lg bg-ide-info/10 border border-ide-info/20">
+              <div className="mx-3 mt-2 p-2 rounded-lg bg-ide-info/10 border border-ide-info/20 text-right">
                 <p className="text-[11px] text-ide-info mb-2">
-                  Merge <span className="font-mono font-medium">{mergingFrom}</span> into <span className="font-mono font-medium">{activeBranch}</span>?
+                  دمج <span className="font-mono font-medium">{mergingFrom}</span> في <span className="font-mono font-medium">{activeBranch}</span>؟
                 </p>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 flex-row-reverse">
                   <button
                     onClick={() => handleMerge(mergingFrom)}
                     disabled={merging}
                     className="flex-1 px-2 py-1 rounded bg-ide-info/20 text-ide-info text-[10px] font-medium hover:bg-ide-info/30 disabled:opacity-40 flex items-center justify-center gap-1"
                   >
                     {merging ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <GitMerge className="h-2.5 w-2.5" />}
-                    Merge
+                    دمج
                   </button>
                   <button
                     onClick={() => setMergingFrom(null)}
                     className="px-2 py-1 rounded bg-secondary text-muted-foreground text-[10px] hover:text-foreground"
                   >
-                    Cancel
+                    إلغاء
                   </button>
                 </div>
               </div>
@@ -540,9 +540,9 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
         {/* LOG TAB */}
         {!loading && selectedRepo && tab === "log" && (
           <div className="py-1">
-            <div className="px-3 py-1.5 flex items-center gap-2 border-b border-border/50 text-[10px] text-muted-foreground">
+            <div className="px-3 py-1.5 flex items-center gap-2 border-b border-border/50 text-[10px] text-muted-foreground flex-row-reverse">
               <GitBranch className="h-2.5 w-2.5" />
-              {activeBranch} · {commits.length} commits
+              {activeBranch} · {commits.length} تغييرات
             </div>
             {commits.map((c, i) => (
               <CommitItem
@@ -560,13 +560,12 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
         {!loading && selectedRepo && tab === "diff" && (
           <div className="py-1">
             {diffSource && (
-              <div className="px-3 py-1.5 flex items-center gap-2 border-b border-border/50">
+              <div className="px-3 py-1.5 flex items-center gap-2 border-b border-border/50 flex-row-reverse">
                 <GitCompare className="h-3 w-3 text-ide-info" />
                 <span className="text-[10px] text-muted-foreground font-mono">{diffSource}</span>
                 {diffSummary && (
-                  <span className="ml-auto text-[10px]">
+                  <span className="mr-auto text-[10px] flex gap-2 flex-row-reverse">
                     <span className="text-ide-success">↑{diffSummary.ahead_by}</span>
-                    {" "}
                     <span className="text-destructive">↓{diffSummary.behind_by}</span>
                   </span>
                 )}
@@ -576,23 +575,23 @@ export function GitPanel({ currentRepo }: GitPanelProps) {
             {diffFiles.length === 0 && !diffSource && activeBranch === "main" ? (
               <div className="px-3 py-6 text-center">
                 <GitCompare className="h-6 w-6 text-muted-foreground/30 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">Switch to a non-main branch to compare</p>
-                <p className="text-[10px] text-muted-foreground/60 mt-1">or click "diff" on a commit in the Log tab</p>
+                <p className="text-xs text-muted-foreground">انتقل إلى فرع آخر للمقارنة</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-1">أو اضغط على "فروقات" في سجل التغييرات</p>
               </div>
             ) : diffFiles.length === 0 ? (
               <div className="px-3 py-6 text-center">
                 <CheckCircle2 className="h-6 w-6 text-ide-success/40 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">No differences found</p>
+                <p className="text-xs text-muted-foreground">لا توجد فروقات</p>
               </div>
             ) : (
               diffFiles.map((f) => (
                 <div key={f.filename}>
                   <button
                     onClick={() => setExpandedDiff(expandedDiff === f.filename ? null : f.filename)}
-                    className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors text-left"
+                    className="w-full px-3 py-1.5 flex items-center gap-2 hover:bg-secondary/30 transition-colors text-right flex-row-reverse"
                   >
                     {statusIcon(f.status)}
-                    <span className="text-xs font-mono text-foreground truncate flex-1">{f.filename}</span>
+                    <span className="text-xs font-mono text-foreground truncate flex-1" dir="ltr">{f.filename}</span>
                     <span className="text-[10px] text-ide-success">+{f.additions}</span>
                     <span className="text-[10px] text-destructive">-{f.deletions}</span>
                     <ChevronDown className={`h-2.5 w-2.5 text-muted-foreground transition-transform ${expandedDiff === f.filename ? "rotate-180" : ""}`} />
@@ -617,11 +616,11 @@ function formatRelativeTime(dateStr: string): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 1) return "الآن";
+  if (diffMins < 60) return `${diffMins} د`;
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return `${diffHours} سا`;
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 30) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${diffDays} يوم`;
   return date.toLocaleDateString();
 }

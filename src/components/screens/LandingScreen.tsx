@@ -1,236 +1,110 @@
-import { motion, useScroll, useTransform } from "framer-motion";
-import { Sparkles, Code2, ArrowLeft, ArrowUpRight, Github, Eye, GitBranch } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 
 interface LandingScreenProps {
   onEnter: () => void;
 }
 
 export const LandingScreen = ({ onEnter }: LandingScreenProps) => {
-  const { scrollYProgress } = useScroll();
-  const yElement1 = useTransform(scrollYProgress, [0, 1], [0, -50]);
-  const yElement2 = useTransform(scrollYProgress, [0, 1], [0, 50]);
-
-  const mobileHighlights = [
-    { label: "GitHub", value: "Sync", icon: Github },
-    { label: "Preview", value: "Live", icon: Eye },
-    { label: "Agent", value: "Ready", icon: Sparkles },
-  ];
-
-  const mobileBenefits = [
-    {
-      icon: Code2,
-      title: "Focused workspace",
-      description: "The current file, tab, and task stay visible without wasting vertical space.",
-    },
-    {
-      icon: GitBranch,
-      title: "Source control first",
-      description: "Branches, commits, and repository access stay one motion away on small screens.",
-    },
-  ];
-
   return (
-    <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#050505] text-white selection:bg-primary/30 selection:text-primary">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,208,74,0.16),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(255,255,255,0.06),_transparent_28%),linear-gradient(180deg,#050505_0%,#08080a_42%,#050505_100%)]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent)]" />
+    <div className="relative min-h-[100dvh] overflow-hidden bg-[#05060a] text-[#e6eef6] font-cairo" dir="rtl">
 
-      <div className="relative z-10 flex min-h-[100dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-[calc(env(safe-area-inset-top,0px)+0.875rem)]">
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_20px_36px_-28px_rgba(255,209,91,0.95)]">
-              <div className="absolute inset-1 rounded-[14px] bg-primary/12 blur-md" />
-              <span className="relative z-10 font-display text-sm font-bold tracking-tight text-white">HC</span>
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.28em] text-white/50">Mobile Studio</p>
-              <p className="truncate font-display text-lg font-semibold tracking-tight text-white">
-                Hug<span className="text-primary">Code</span>
-              </p>
-            </div>
-          </div>
-
-          <Button
-            onClick={onEnter}
-            variant="ghost"
-            className="h-11 rounded-full border border-white/10 bg-white/[0.03] px-4 text-white hover:bg-white/[0.08] hover:text-white hover-particle"
-          >
-            Enter Studio
-            <ArrowUpRight className="h-4 w-4" />
-          </Button>
-        </header>
-
-        <main className="flex flex-1 flex-col gap-4 pt-5">
-          <motion.section
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="mobile-hero-surface mobile-grid-overlay avant-diagonal-flow volumetric-glow multi-noise rounded-[30px] p-5 hover-particle"
-            style={{ y: yElement1 }}
-          >
-            <div className="relative space-y-5">
-              <div className="flex items-center justify-between gap-2">
-                <Badge
-                  variant="outline"
-                  className="border-primary/20 bg-primary/10 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-primary"
-                >
-                  AI-Native IDE
-                </Badge>
-                <span className="text-[10px] uppercase tracking-[0.22em] text-white/45">GitHub • Preview • Agent</span>
+      {/* Main Container */}
+      <div className="flex min-h-[100dvh] items-center justify-center p-4 md:p-8">
+        <motion.main 
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="glass-panel relative flex w-full max-w-[920px] flex-col overflow-hidden rounded-[14px] shadow-2xl md:flex-row"
+        >
+          {/* Left Section (Information) */}
+          <section className="flex-[1.1] p-6 md:p-12">
+            <div className="flex items-center gap-3">
+              <div className="relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-[10px] shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+                <img src="/app-icon.png" alt="Hug Code Logo" className="h-full w-full object-cover" />
               </div>
-
-              <div className="space-y-3">
-                <h1 className="font-display font-black text-[clamp(2.2rem,6vw,3.5rem)] leading-[0.88] tracking-[-0.05em] text-white">
-                  Code with
-                  <span className="block text-primary">Intention.</span>
-                </h1>
-                <p className="max-w-sm text-sm leading-6 text-white/68">
-                  A phone-first coding surface that keeps files, preview, Git, and the AI assistant in one calm flow.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-3 -skew-y-3">
-                {mobileHighlights.map(({ label, value, icon: Icon }, i) => (
-                  <motion.div
-                    key={label}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: i * 0.1 }}
-                    className="hover-particle"
-                  >
-                    <Card className="mobile-quiet-surface volumetric-glow rounded-[22px] border-white/8 bg-transparent hover:scale-[1.02]">
-                      <CardContent className="p-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <Icon className="h-4 w-4 text-primary glow-primary" />
-                          <span className="text-[10px] uppercase tracking-[0.22em] text-white/35">{label}</span>
-                        </div>
-                        <p className="mt-4 text-sm font-semibold tracking-tight text-white">{value}</p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-
-              <div className="grid gap-2">
-                <motion.div whileHover={{ scale: 1.02 }} className="hover-particle">
-                  <Button
-                    onClick={onEnter}
-                    className="h-12 rounded-[22px] bg-gradient-to-r from-primary/90 to-accent/70 text-sm font-black shadow-[0_25px_50px_-30px_rgba(69,57,255,0.6)] hover:shadow-[0_30px_60px_-35px_rgba(69,57,255,0.8)] font-display"
-                  >
-                    Launch IDE
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                </motion.div>
-                <Button
-                  onClick={onEnter}
-                  variant="outline"
-                  className="h-11 rounded-[18px] border-white/12 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white"
-                >
-                  Sign In with GitHub
-                  <Github className="h-4 w-4" />
-                </Button>
+              <div>
+                <div className="text-xl font-bold tracking-wide">
+                  Hug<span className="text-[#ffd24a]">Code</span>
+                </div>
+                <div className="text-xs text-[#9aa3b2]">محرر كود موبايل احترافي · محرّك تطوير مع تكامل GitHub</div>
               </div>
             </div>
-          </motion.section>
 
-          <section className="relative grid grid-cols-2 gap-4 [grid-template-areas:'a_b'] pt-8">
-            {mobileBenefits.map(({ icon: Icon, title, description }, i) => (
-              <motion.div
-                key={title}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.4 + i * 0.15 }}
-                className="hover-particle relative z-10"
-                style={{ gridArea: `a_${i + 1}` as any }}
+            <h1 className="mt-8 text-3xl font-bold leading-tight md:text-[32px]">
+              مرحبًا في Hug Code
+            </h1>
+
+            <p className="mt-4 max-w-[56ch] text-[15px] leading-relaxed text-[#9aa3b2]">
+              محرر ومحرّك تطوير موبايل هادئ وسريع، يجمع بين تجربة تحرير احترافية ومساعد ذكاء اصطناعي وتكامل مباشر مع GitHub — مُصمم للهواتف أولاً.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Button 
+                onClick={onEnter}
+                className="h-12 rounded-[12px] bg-gradient-to-r from-[#ffda6a] to-[#ffd24a] px-6 text-[16px] font-bold text-[#071017] shadow-[0_8px_28px_rgba(255,210,74,0.12)] transition-transform hover:-translate-y-1"
               >
-                <Card className="mobile-quiet-surface volumetric-glow rounded-[26px] border-primary/20 bg-gradient-to-br from-transparent/50 to-primary/5 hover:scale-105">
-                  <CardContent className="flex h-full flex-col p-5 pb-6">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-3xl border-2 border-primary/30 bg-primary/10 backdrop-blur-sm text-primary glow-accent">
-                      <Icon className="h-5 w-5 drop-shadow-glow" />
-                    </div>
-                    <h2 className="mt-5 font-display text-base font-bold tracking-tight text-white">{title}</h2>
-                    <p className="mt-3 text-sm leading-relaxed text-white/75">{description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-            <div className="pointer-events-none absolute inset-0 bg-[conic-gradient(from_225deg_at_50%_50%,transparent_0deg,transparent_90deg,_hsl(var(--accent)/0.06)_180deg,hsl(var(--primary)/0.08)_270deg)] [mask-image:radial-gradient(ellipse_30%_40%_at_20%_80%,transparent,black)] animate-spin-slow opacity-60" />
+                افتح التطبيق
+              </Button>
+              <Button 
+                variant="outline"
+                asChild
+                className="h-12 rounded-[12px] border-white/10 bg-transparent px-6 text-[16px] font-bold text-[#e6eef6] transition-transform hover:-translate-y-1 hover:bg-white/5 rtl:gap-2"
+              >
+                <a href="https://github.com/amiraq1/hug-code-companion" target="_blank" rel="noopener noreferrer">
+                  عرض المشروع
+                </a>
+              </Button>
+            </div>
+
+            <div className="mt-10 space-y-5">
+              <div className="flex items-start gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.04] font-bold text-[#ffd24a]">AI</div>
+                <div>
+                  <div className="font-bold">مساعد ذكي</div>
+                  <div className="text-sm text-[#9aa3b2]">اقتراحات، مساعدات كتابة، وأدوات تنفيذية داخل المحرر.</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.04] font-bold text-[#ffd24a]">Git</div>
+                <div>
+                  <div className="font-bold">تكامل GitHub</div>
+                  <div className="text-sm text-[#9aa3b2]">عرض المستودعات، الفروع، والالتزامات مع إمكانية Commit & Push مباشرة.</div>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.04] font-bold text-[#ffd24a]">Preview</div>
+                <div>
+                  <div className="font-bold">معاينة مباشرة</div>
+                  <div className="text-sm text-[#9aa3b2]">عرض صفحات HTML / CSS / JS وMarkdown مباشرة داخل الواجهة.</div>
+                </div>
+              </div>
+            </div>
           </section>
 
-          <motion.div
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-            style={{ y: yElement2 }}
-          >
-            <Card className="mobile-quiet-surface mobile-grid-overlay avant-diagonal-flow volumetric-glow multi-noise overflow-hidden rounded-[30px] border-primary/15 relative hover:scale-[1.01] hover-particle">
-              <CardContent className="p-0">
-                <div className="flex items-center gap-2 border-b border-white/8 px-4 py-3">
-                  <div className="flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/80" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-green-500/80" />
-                  </div>
-                  <div className="ml-auto rounded-full border border-white/8 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-white/45">
-                    Mobile workspace
-                  </div>
-                </div>
+          {/* Right Section (Meta) */}
+          <aside className="gradient-bg flex-[0.9] border-t border-white/5 p-8 md:border-r md:border-t-0 flex flex-col justify-center">
+            <div className="mb-6">
+              <div className="text-[13px] text-[#9aa3b2]">نسخة</div>
+              <div className="mt-1 text-2xl font-bold">1.0.0</div>
+              <div className="mt-2 text-[13px] text-[#9aa3b2]">نسخة مبدئية · جاهزة للاختبار</div>
+            </div>
 
-                <div className="grid grid-cols-[92px_minmax(0,1fr)]">
-                  <div className="border-r border-white/8 px-3 py-4">
-                    <p className="text-[10px] uppercase tracking-[0.24em] text-white/32">Files</p>
-                    <div className="mt-3 space-y-2 text-[11px] text-white/55">
-                      <div className="rounded-full border border-white/8 bg-white/[0.03] px-2 py-1">src</div>
-                      <div className="rounded-full border border-primary/18 bg-primary/10 px-2 py-1 text-primary">App.tsx</div>
-                      <div className="rounded-full border border-white/8 bg-white/[0.03] px-2 py-1">preview</div>
-                    </div>
-                  </div>
-
-                  <div className="px-4 py-4">
-                    <div className="space-y-2 font-mono text-[11px] leading-5">
-                      <div>
-                        <span className="text-primary/90">const</span>{" "}
-                        <span className="text-white">workspace</span>{" "}
-                        <span className="text-white/45">=</span>{" "}
-                        <span className="text-yellow-400">{"{"}</span>
-                      </div>
-                      <div className="pl-4 text-white/70">
-                        view: <span className="text-primary">"focused"</span>,
-                      </div>
-                      <div className="pl-4 text-white/70">
-                        repo: <span className="text-primary">"connected"</span>,
-                      </div>
-                      <div className="pl-4 text-white/70">
-                        agent: <span className="text-primary">"inline"</span>,
-                      </div>
-                      <div>
-                        <span className="text-yellow-400">{"}"}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.03] p-3">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
-                          <Sparkles className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold tracking-tight text-white">AI suggestion</p>
-                          <p className="mt-1 text-[11px] leading-5 text-white/58">
-                            Keep the active file, preview, and Git status visible with less vertical noise.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </main>
+            <div className="mt-6 space-y-4 text-[13px] leading-relaxed text-[#9aa3b2]">
+              <p>
+                <strong>للمطوّرين:</strong> شغّل التطبيق محليًا عبر <code className="rounded bg-white/5 px-1.5 py-0.5">npm run dev</code>. لبناء الإنتاج استخدم <code className="rounded bg-white/5 px-1.5 py-0.5">npm run build</code>.
+              </p>
+              <p>إذا أردت صفحة بلغات متعددة أو إعادة توجيه مخصّص، أستطيع أعدّلها لك.</p>
+            </div>
+          </aside>
+        </motion.main>
       </div>
+
+      <footer className="absolute bottom-4 w-full text-center text-[13px] text-[#9aa3b2]/60">
+        © Hug Code — جميع الحقوق محفوظة · <span className="opacity-80">2024</span>
+      </footer>
     </div>
   );
 };

@@ -149,7 +149,7 @@ const TaskCard = memo(({
             {task.estimated_hours != null && (
               <span className="flex items-center gap-1 bg-secondary/30 px-1.5 py-0.5 rounded">
                 <Clock className="h-3 w-3 text-primary/70" />
-                {task.estimated_hours}h
+                {task.estimated_hours} ساعة
               </span>
             )}
             {task.assignee && (
@@ -160,7 +160,7 @@ const TaskCard = memo(({
             )}
             {task.deadline_days != null && (
               <span className="bg-secondary/30 px-1.5 py-0.5 rounded">
-                Day {task.deadline_days}
+                اليوم {task.deadline_days}
               </span>
             )}
           </div>
@@ -188,7 +188,7 @@ const TaskCard = memo(({
                     {st.title}
                   </span>
                   <div className="flex items-center justify-end gap-2 text-[10px] text-muted-foreground/60 mt-0.5">
-                    {st.estimated_hours != null && <span>{st.estimated_hours}h</span>}
+                    {st.estimated_hours != null && <span>{st.estimated_hours} ساعة</span>}
                     <span className={`text-[9px] px-1 py-0 rounded border border-opacity-20 ${PRIORITY_COLORS[st.priority]}`}>
                       {PRIORITY_LABELS[st.priority]}
                     </span>
@@ -304,7 +304,7 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
   // Projects list view
   if (view === "projects") {
     return (
-      <div className="h-full flex flex-col bg-background">
+      <div className="h-full flex flex-col bg-background" dir="rtl">
         <div className="h-11 bg-ide-sidebar border-b border-border flex items-center px-3 gap-2 shrink-0">
           <button onClick={onBack} className="p-1.5 rounded-md hover:bg-secondary/60 text-muted-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -365,7 +365,7 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
   // Input view
   if (view === "input") {
     return (
-      <div className="h-full flex flex-col bg-background">
+      <div className="h-full flex flex-col bg-background" dir="rtl">
         <div className="h-11 bg-ide-sidebar border-b border-border flex items-center px-3 gap-2 shrink-0">
           <button onClick={() => setView("projects")} className="p-1.5 rounded-md hover:bg-secondary/60 text-muted-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -420,7 +420,7 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
 
   // Tasks view
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background" dir="rtl">
       <div className="h-11 bg-ide-sidebar border-b border-border flex items-center px-3 gap-2 shrink-0">
         <button onClick={() => setView("projects")} className="p-1.5 rounded-md hover:bg-secondary/60 text-muted-foreground">
           <ArrowLeft className="h-4 w-4" />
@@ -433,7 +433,7 @@ export function AIProjectPlanner({ onBack, sessionId }: AIProjectPlannerProps) {
           <span className="flex items-center gap-1"><Circle className="h-3 w-3 text-muted-foreground" /> {mainTasks.length}</span>
           <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-ide-success" /> {tasks.filter((t) => t.status === "done").length}</span>
         </div>
-        <span className="flex items-center gap-1 font-semibold text-primary/80"><Clock className="h-3 w-3" /> {Math.round(tasks.reduce((s, t) => s + (t.estimated_hours || 0), 0))}h</span>
+        <span className="flex items-center gap-1 font-semibold text-primary/80 flex-row-reverse"><Clock className="h-3 w-3 ml-1" /> {Math.round(tasks.reduce((s, t) => s + (t.estimated_hours || 0), 0))} ساعة</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/50" dir="rtl">

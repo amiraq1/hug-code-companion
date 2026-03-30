@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&family=Big+Shoulders+Display:wght@200..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&family=Big+Shoulders+Display:wght@200..900&family=Cairo:wght@300;400;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -74,7 +74,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-family: 'Cairo', 'Space Grotesk', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
@@ -82,6 +82,10 @@
 
   code, pre, .font-mono {
     font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .font-cairo {
+    font-family: 'Cairo', sans-serif;
   }
 }
 
@@ -381,4 +385,14 @@
 .hover-particle:hover::after {
   opacity: 1;
   transform: scale(1);
+}
+
+.glass-panel { 
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); 
+  border: 1px solid rgba(255,255,255,0.06); 
+  backdrop-filter: blur(20px);
+}
+
+.gradient-bg { 
+  background: radial-gradient(600px 200px at 10% 20%, rgba(255,210,74,0.06), transparent 10%), linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%); 
 }

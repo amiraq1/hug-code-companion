@@ -73,7 +73,7 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
       if (e instanceof GitHubError) {
         setError(e.message);
       } else {
-        setError("Failed to load repositories.");
+        setError("فشل تحميل المستودعات.");
       }
       setRepos([]);
     }
@@ -99,13 +99,19 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
     return result;
   }, [repos, search, filter]);
 
+  const filterLabels = {
+    all: "الكل",
+    public: "عام",
+    private: "خاص"
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-background grain-overlay">
+    <div className="h-screen flex flex-col bg-background grain-overlay" dir="rtl">
       {/* Offline banner */}
       {!online && (
         <div className="px-4 py-2 bg-destructive/10 border-b border-destructive/20 flex items-center gap-2 shrink-0">
           <WifiOff className="h-4 w-4 text-destructive" />
-          <span className="text-xs text-destructive font-medium">No internet connection</span>
+          <span className="text-xs text-destructive font-medium">لا يوجد اتصال بالإنترنت</span>
         </div>
       )}
 
@@ -115,7 +121,7 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
           onClick={onBack}
           className="p-1.5 rounded-md hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
         </button>
         <div className="flex items-center gap-2">
           <img src="/app-icon.png" alt="" className="w-5 h-5 rounded" />
@@ -123,19 +129,19 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
             Hug<span className="text-primary">Code</span>
           </span>
         </div>
-        <span className="text-xs text-muted-foreground font-mono">/ repositories</span>
+        <span className="text-xs text-muted-foreground font-mono">/ المستودعات</span>
       </div>
 
       {/* Search & Filter */}
       <div className="px-4 md:px-8 lg:px-16 py-4 border-b border-border bg-ide-sidebar/50 shrink-0">
         <div className="max-w-3xl mx-auto flex gap-2">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search repositories..."
-              className="w-full bg-secondary border border-border rounded-lg pl-10 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-shadow"
+              placeholder="بحث في المستودعات..."
+              className="w-full bg-secondary border border-border rounded-lg pr-10 pl-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-shadow text-right"
             />
           </div>
           <div className="flex rounded-lg border border-border overflow-hidden shrink-0">
@@ -143,12 +149,12 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-2 text-xs font-medium capitalize transition-colors ${filter === f
+                className={`px-3 py-2 text-xs font-medium transition-colors ${filter === f
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
                   }`}
               >
-                {f}
+                {filterLabels[f]}
               </button>
             ))}
           </div>
@@ -174,7 +180,7 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
                 disabled={!online}
                 className="px-4 py-2 bg-secondary text-foreground rounded-lg text-xs font-medium hover:bg-secondary/80 transition-colors disabled:opacity-40"
               >
-                Retry
+                إعادة المحاولة
               </button>
             </div>
           )}
@@ -186,7 +192,7 @@ export function ReposScreen({ onSelectRepo, onBack }: ReposScreenProps) {
           ) : !error && filtered.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-sm text-muted-foreground">
-                {search ? "No repositories match your search." : "No repositories found."}
+                {search ? "لا توجد مستودعات تطابق بحثك." : "لم يتم العثور على مستودعات."}
               </p>
             </div>
           ) : !error ? (

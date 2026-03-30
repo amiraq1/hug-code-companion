@@ -153,8 +153,8 @@ function CodeBlockWithInsert({
   );
 
   return (
-    <div className="relative mt-2 mb-4 group/block">
-      <div className="absolute top-0 right-0 z-10 m-1 flex flex-col items-end gap-1.5 p-1 opacity-100 transition-opacity duration-200 sm:flex-row sm:items-center sm:opacity-0 sm:group-hover/block:opacity-100">
+    <div className="relative mt-2 mb-4 group/block" dir="rtl">
+      <div className="absolute top-0 left-0 z-10 m-1 flex flex-col items-start gap-1.5 p-1 opacity-100 transition-opacity duration-200 sm:flex-row sm:items-center sm:opacity-0 sm:group-hover/block:opacity-100">
         {onInsert && (
           <>
             <button
@@ -194,7 +194,7 @@ function CodeBlockWithInsert({
       </div>
 
       <div className="overflow-hidden rounded-md border border-border bg-[#0d0d0d]">
-        <code className={`block overflow-x-auto p-4 ${className || ""}`}>{code}</code>
+        <code className={`block overflow-x-auto p-4 text-left ${className || ""}`} dir="ltr">{code}</code>
       </div>
     </div>
   );
@@ -282,22 +282,22 @@ export function AIChatPanel({
 
         if (text.includes("🛠️ جاري تنفيذ أداة")) {
           return (
-            <div className="tool-executing glass-card relative my-3 overflow-hidden rounded-lg border border-primary/20 p-3 animate-fade-in">
-              <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-primary">
+            <div className="tool-executing glass-card relative my-3 overflow-hidden rounded-lg border border-primary/20 p-3 animate-fade-in text-right">
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-primary justify-end">
+                <span>إجراء المساعد</span>
                 <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                Agent Action
               </div>
               <div className="text-[12px] leading-relaxed opacity-90">{children}</div>
-              <div className="absolute bottom-0 left-0 h-[1px] w-full animate-shimmer bg-primary/40" />
+              <div className="absolute bottom-0 right-0 h-[1px] w-full animate-shimmer bg-primary/40" />
             </div>
           );
         }
 
         if (text.includes("⚠️ **تنبيه استباقي**")) {
-          return <div className="proactive-alert my-2">{children}</div>;
+          return <div className="proactive-alert my-2 text-right">{children}</div>;
         }
 
-        return <p className="m-0">{children}</p>;
+        return <p className="m-0 text-right">{children}</p>;
       },
     }),
     [onCreateFile, onInsertCode],
@@ -517,14 +517,15 @@ export function AIChatPanel({
   ]);
 
   return (
-    <div className="flex h-full flex-col border-l border-border bg-ide-panel">
+    <div className="flex h-full flex-col border-r border-border bg-ide-panel" dir="rtl">
       <div className="flex items-center gap-2 border-b border-border px-4 py-3">
         <div className="h-1.5 w-1.5 animate-pulse-glow rounded-full bg-primary" />
         <span className="font-display text-[13px] font-medium tracking-tight text-foreground">
-          Agent
+          المساعد الذكي
         </span>
-        <span className="ml-auto rounded-full bg-ide-success/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-ide-success">
-          {isStreaming ? "streaming" : "live"}
+        <div className="flex-1" />
+        <span className="rounded-full bg-ide-success/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-ide-success">
+          {isStreaming ? "جارٍ البث" : "مباشر"}
         </span>
       </div>
 
@@ -543,7 +544,7 @@ export function AIChatPanel({
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex animate-fade-in gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}
+            className={`flex animate-fade-in gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
           >
             {msg.role === "assistant" && (
               <div className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10">
@@ -552,14 +553,14 @@ export function AIChatPanel({
             )}
 
             <div
-              className={`max-w-[85%] rounded-lg px-3 py-2.5 text-[13px] leading-relaxed ${
+              className={`max-w-[85%] rounded-lg px-3 py-2.5 text-[13px] leading-relaxed text-right ${
                 msg.role === "user"
                   ? "border border-primary/10 bg-primary/10 text-foreground"
                   : "bg-secondary/60 text-secondary-foreground"
               }`}
             >
               {msg.role === "assistant" ? (
-                <div className="prose prose-sm prose-invert max-w-none [&_code]:font-mono [&_code]:text-[11px] [&_code]:text-primary/80 [&_p]:m-0 [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_pre]:bg-background/80 [&_pre]:p-2.5">
+                <div className="prose prose-sm prose-invert max-w-none [&_code]:font-mono [&_code]:text-[11px] [&_code]:text-primary/80 [&_p]:m-0 [&_pre]:rounded-md [&_pre]:border [&_pre]:border-border [&_pre]:bg-background/80 [&_pre]:p-2.5 text-right">
                   <ReactMarkdown components={markdownComponents}>{msg.content}</ReactMarkdown>
                 </div>
               ) : (
@@ -582,19 +583,19 @@ export function AIChatPanel({
                 <Bot className="h-3 w-3 text-primary/70" />
               </div>
 
-              <div className="flex min-w-[120px] items-center gap-3 rounded-lg bg-secondary/60 px-3 py-2.5">
+              <div className="flex min-w-[120px] items-center gap-3 rounded-lg bg-secondary/60 px-3 py-2.5 flex-row-reverse">
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                <span className="animate-pulse font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                <span className="animate-pulse font-mono text-[10px] uppercase tracking-widest text-muted-foreground mr-2">
                   {currentStep === 1
-                    ? "Analyzing"
+                    ? "جاري التحليل"
                     : currentStep === 2
-                      ? "Generating"
-                      : "Finalizing"}
+                      ? "جاري التوليد"
+                      : "جارٍ الإنهاء"}
                 </span>
               </div>
             </div>
 
-            <div className="ml-7 flex gap-1.5">
+            <div className="mr-7 flex gap-1.5 flex-row-reverse justify-end">
               {[1, 2, 3].map((step) => (
                 <div
                   key={step}
@@ -611,7 +612,7 @@ export function AIChatPanel({
       </div>
 
       <div className="border-t border-border p-2.5 sm:p-3">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-row-reverse">
           <input
             type="text"
             value={input}
@@ -623,7 +624,7 @@ export function AIChatPanel({
             }}
             placeholder="اسأل عن أي شيء..."
             disabled={isStreaming}
-            className="min-h-[44px] flex-1 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-[13px] text-foreground transition-all duration-200 placeholder:text-muted-foreground/50 focus:border-primary/20 focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-50"
+            className="min-h-[44px] flex-1 rounded-lg border border-border bg-secondary/50 px-3 py-2 text-[13px] text-foreground transition-all duration-200 placeholder:text-muted-foreground/50 focus:border-primary/20 focus:outline-none focus:ring-1 focus:ring-primary/30 disabled:opacity-50 text-right"
           />
 
           {isStreaming ? (
@@ -639,7 +640,7 @@ export function AIChatPanel({
               disabled={!input.trim()}
               className="rounded-lg bg-primary px-3 py-2 text-primary-foreground transition-all duration-200 hover:bg-primary/90 disabled:opacity-20"
             >
-              <Send className="h-3.5 w-3.5" />
+              <Send className="h-3.5 w-3.5 rtl:rotate-180" />
             </button>
           )}
         </div>

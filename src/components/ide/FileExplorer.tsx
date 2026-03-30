@@ -128,19 +128,19 @@ export function FileExplorer({ files, activeFile, onFileSelect }: FileExplorerPr
       const meta = getFileMeta(node.name, node.language);
       const fileColor = meta.accentClass;
 
-      if (node.type === "folder") {
+  if (node.type === "folder") {
         return (
           <button
             onClick={() => toggleFolder(node.path)}
             aria-expanded={isExpanded}
             title={node.name}
-            className="flex h-full w-full items-center gap-1.5 px-2 py-[3px] text-[12px] transition-all duration-150 hover:bg-secondary/40"
-            style={{ paddingLeft: `${depth * 14 + 8}px` }}
+            className="flex h-full w-full items-center gap-1.5 px-2 py-[3px] text-[12px] transition-all duration-150 hover:bg-secondary/40 text-right"
+            style={{ paddingRight: `${depth * 14 + 8}px` }}
           >
             {isExpanded ? (
               <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground/60" />
             ) : (
-              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/60 rtl:rotate-180" />
             )}
 
             {isExpanded ? (
@@ -161,10 +161,10 @@ export function FileExplorer({ files, activeFile, onFileSelect }: FileExplorerPr
           title={node.name}
           className={`group relative flex h-full w-full items-center gap-2 px-2 py-1.5 text-[13px] transition-all duration-200 ${
             isActive
-              ? "border-l-2 border-l-primary bg-primary/10 font-medium text-primary"
-              : "text-sidebar-foreground/80 hover:bg-secondary/60 hover:text-foreground"
+              ? "border-r-2 border-r-primary bg-primary/10 font-medium text-primary text-right"
+              : "text-sidebar-foreground/80 hover:bg-secondary/60 hover:text-foreground text-right"
           }`}
-          style={{ paddingLeft: `${depth * 14 + 22}px` }}
+          style={{ paddingRight: `${depth * 14 + 22}px` }}
         >
           {renderFileIcon(meta.kind, isActive ? "text-primary" : fileColor)}
           <span className="truncate">{node.name}</span>
@@ -175,10 +175,10 @@ export function FileExplorer({ files, activeFile, onFileSelect }: FileExplorerPr
   );
 
   return (
-    <div className="isolate flex h-full flex-col border-r border-border bg-ide-sidebar/95 shadow-sm backdrop-blur-sm">
+    <div className="isolate flex h-full flex-col border-l border-border bg-ide-sidebar/95 shadow-sm backdrop-blur-sm" dir="rtl">
       <div className="relative z-10 flex items-center justify-between px-4 py-3 shadow-sm">
         <span className="font-mono text-[11px] font-bold uppercase tracking-widest text-muted-foreground/80">
-          Explorer
+          المستعرض
         </span>
       </div>
 
@@ -187,9 +187,9 @@ export function FileExplorer({ files, activeFile, onFileSelect }: FileExplorerPr
           <div className="flex h-full items-center justify-center px-6 text-center">
             <div className="space-y-2">
               <p className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground/60">
-                Explorer
+                المستعرض
               </p>
-              <p className="text-sm text-muted-foreground">No files available</p>
+              <p className="text-sm text-muted-foreground">لا توجد ملفات متاحة</p>
             </div>
           </div>
         ) : (

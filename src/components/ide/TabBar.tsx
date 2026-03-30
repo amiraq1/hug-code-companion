@@ -14,14 +14,14 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommi
   if (openFiles.length === 0) return null;
 
   return (
-    <div className="flex snap-x snap-mandatory bg-ide-tab-inactive border-b border-border overflow-x-auto">
+    <div className="flex snap-x snap-mandatory bg-ide-tab-inactive border-b border-border overflow-x-auto" dir="rtl">
       {openFiles.map((file) => {
         const isActive = activeFile === file.path;
         const isGitHub = file.path.startsWith("github:");
         return (
           <div
             key={file.path}
-            className={`tab-indicator group snap-start flex min-h-11 items-center gap-2 border-r border-border/50 px-3 py-2 text-[11px] font-mono cursor-pointer shrink-0 transition-all duration-200 md:px-4 md:text-[12px] ${
+            className={`tab-indicator group snap-start flex min-h-11 items-center gap-2 border-l border-border/50 px-3 py-2 text-[11px] font-mono cursor-pointer shrink-0 transition-all duration-200 md:px-4 md:text-[12px] ${
               isActive
                 ? "active bg-ide-tab-active text-foreground"
                 : "text-muted-foreground hover:bg-secondary/30 hover:text-secondary-foreground"
@@ -39,7 +39,7 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommi
                 }}
                 className="rounded p-1 text-ide-success opacity-100 transition-all duration-150 hover:bg-ide-success/20 md:opacity-0 md:group-hover:opacity-100"
                 aria-label={`Commit and push ${file.name}`}
-                title="Commit & Push"
+                title="حفظ ورفع"
               >
                 <Upload className="h-3 w-3" />
               </button>
@@ -59,5 +59,6 @@ export function TabBar({ openFiles, activeFile, onTabSelect, onTabClose, onCommi
         );
       })}
     </div>
+
   );
 }

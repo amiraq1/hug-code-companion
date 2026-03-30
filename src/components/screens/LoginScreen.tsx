@@ -28,14 +28,14 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-[100dvh] bg-background grain-overlay px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-[calc(env(safe-area-inset-top,0px)+1rem)]">
+      <div className="min-h-[100dvh] bg-background grain-overlay px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-[calc(env(safe-area-inset-top,0px)+1rem)]" dir="rtl">
         <div className="mx-auto flex min-h-[calc(100dvh-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px)-2.5rem)] max-w-sm flex-col justify-center">
           <div className="mobile-hero-surface rounded-[30px] p-6 text-center">
             <div className="relative mx-auto flex h-14 w-14 items-center justify-center rounded-[22px] border border-primary/18 bg-primary/10 text-primary">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
-            <p className="mt-5 text-xs uppercase tracking-[0.24em] text-muted-foreground">Session</p>
-            <p className="mt-2 text-sm text-muted-foreground">جار التحقق من المصادقة...</p>
+            <p className="mt-5 text-xs uppercase tracking-[0.24em] text-muted-foreground">الجلسة</p>
+            <p className="mt-2 text-sm text-muted-foreground">جارِ التحقق من المصادقة...</p>
           </div>
         </div>
       </div>
@@ -43,13 +43,13 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
   }
 
   const mobileSteps = [
-    { label: "1", title: "Connect", detail: "Authorize GitHub in the system browser." },
-    { label: "2", title: "Return", detail: "The deep link brings you back to the app." },
-    { label: "3", title: "Code", detail: "Open repos, preview changes, and commit." },
+    { label: "1", title: "اتصال", detail: "صرح لـ GitHub في متصفح النظام." },
+    { label: "2", title: "عودة", detail: "الرابط العميق يعيدك إلى التطبيق." },
+    { label: "3", title: "برمجة", detail: "افتح المستودعات، عاين التغييرات، وارفعها." },
   ];
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-background grain-overlay">
+    <div className="relative min-h-[100dvh] overflow-hidden bg-background grain-overlay" dir="rtl">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,208,74,0.12),_transparent_34%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.05),_transparent_28%)]" />
 
       <div className="relative z-10 flex min-h-[100dvh] flex-col px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-[calc(env(safe-area-inset-top,0px)+0.875rem)]">
@@ -63,7 +63,7 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
               <p className="font-display text-lg font-semibold tracking-tight text-foreground">
                 Hug<span className="text-primary">Code</span>
               </p>
-              <p className="truncate text-[11px] text-muted-foreground">AI-Powered Code Editor & GitHub IDE</p>
+              <p className="truncate text-[11px] text-muted-foreground">محرر كود ذكي وبيئة تطوير GitHub</p>
             </div>
           </div>
 
@@ -71,7 +71,7 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
             variant="outline"
             className="h-8 rounded-full border-white/10 bg-white/[0.03] px-3 text-[10px] uppercase tracking-[0.22em] text-muted-foreground"
           >
-            {isAuthenticated ? "Connected" : "Secure"}
+            {isAuthenticated ? "متصل" : "آمن"}
           </Badge>
         </header>
 
@@ -88,9 +88,9 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
                   {isAuthenticated ? <Github className="h-7 w-7" /> : <LogIn className="h-7 w-7" />}
                 </div>
                 <div className="rounded-[20px] border border-white/8 bg-white/[0.03] px-3 py-2 text-right">
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Session state</p>
+                  <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">حالة الجلسة</p>
                   <p className="mt-1 text-sm font-semibold tracking-tight text-foreground">
-                    {isAuthenticated ? "متصل" : "مرحبًا"}
+                    {isAuthenticated ? "متصل" : "مرحبًا بك"}
                   </p>
                 </div>
               </div>
@@ -119,7 +119,7 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
               {!isAuthenticated ? (
                 <>
                   <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">GitHub access</p>
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">وصول GitHub</p>
                     <h1 className="font-display text-[2rem] font-semibold tracking-tight text-foreground">مرحبًا</h1>
                     <p className="text-sm leading-6 text-muted-foreground">
                       اربط حسابك على GitHub لتصفح المستودعات وتعديل الأكواد ودفع التغييرات.
@@ -133,12 +133,12 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium tracking-tight text-foreground">
-                          {isOnline ? "Ready to authenticate" : "No internet connection"}
+                          {isOnline ? "جاهز للمصادقة" : "لا يوجد اتصال بالإنترنت"}
                         </p>
-                        <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
+                        <p className="mt-1 text-[12px] leading-5 text-muted-foreground text-right">
                           {isOnline
-                            ? "GitHub opens in the external browser, then returns to the app."
-                            : "Connect to the internet first, then retry the sign-in flow."}
+                            ? "سيفتح GitHub في المتصفح الخارجي، ثم يعود بك إلى التطبيق."
+                            : "يرجى الاتصال بالإنترنت أولاً، ثم أعد المحاولة."}
                         </p>
                       </div>
                     </CardContent>
@@ -150,7 +150,7 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
                       disabled={!isOnline}
                       className="h-12 rounded-[18px] text-sm font-semibold shadow-[0_22px_44px_-28px_rgba(255,209,91,0.95)]"
                     >
-                      <Github className="h-5 w-5" />
+                      <Github className="h-5 w-5 ml-2" />
                       تسجيل الدخول عبر GitHub
                     </Button>
 
@@ -159,15 +159,15 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
                       variant="outline"
                       className="h-11 rounded-[18px] border-white/12 bg-white/[0.03] text-foreground hover:bg-white/[0.08] hover:text-foreground"
                     >
-                      المتابعة بدون GitHub
+                      المتابعة كضيف
                     </Button>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">GitHub connected</p>
-                    <h1 className="font-display text-[2rem] font-semibold tracking-tight text-foreground">متصل</h1>
+                    <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">تم الاتصال بـ GitHub</p>
+                    <h1 className="font-display text-[2rem] font-semibold tracking-tight text-foreground">أنت متصل</h1>
                     <p className="text-sm leading-6 text-muted-foreground">
                       تم تسجيل الدخول كـ <span className="font-medium text-primary">@{username}</span>
                     </p>
@@ -180,8 +180,8 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium tracking-tight text-foreground">@{username}</p>
-                        <p className="mt-1 text-[12px] leading-5 text-muted-foreground">
-                          Session proof is active and repository access is ready on this device.
+                        <p className="mt-1 text-[12px] leading-5 text-muted-foreground text-right">
+                          جلسة المصادقة نشطة والوصول للمستودعات جاهز على هذا الجهاز.
                         </p>
                       </div>
                     </CardContent>
@@ -191,7 +191,7 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
                     onClick={onContinue}
                     className="h-12 rounded-[18px] text-sm font-semibold shadow-[0_22px_44px_-28px_rgba(255,209,91,0.95)]"
                   >
-                    <LogIn className="h-4 w-4" />
+                    <LogIn className="h-4 w-4 ml-2" />
                     فتح المحرر
                   </Button>
                 </>
@@ -202,13 +202,13 @@ export function LoginScreen({ onContinue }: LoginScreenProps) {
           <Card className="mobile-quiet-surface mobile-grid-overlay rounded-[28px] border-white/8 bg-transparent">
             <CardContent className="p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">Connection flow</p>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">3 steps</p>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">خطوات الاتصال</p>
+                <p className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground">3 خطوات</p>
               </div>
 
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {mobileSteps.map((step) => (
-                  <div key={step.label} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3">
+                  <div key={step.label} className="rounded-[20px] border border-white/8 bg-white/[0.03] p-3 text-right">
                     <span className="text-[10px] uppercase tracking-[0.24em] text-primary">{step.label}</span>
                     <p className="mt-3 text-sm font-medium tracking-tight text-foreground">{step.title}</p>
                     <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{step.detail}</p>

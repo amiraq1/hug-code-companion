@@ -48,10 +48,10 @@ type MobileTab = "files" | "editor" | "preview" | "chat" | "git";
 
 const MOBILE_TABS: MobileTab[] = ["files", "editor", "preview", "chat", "git"];
 const MOBILE_NAV_ITEMS: Array<{ id: MobileTab; icon: typeof FolderTree; label: string }> = [
-  { id: "files", icon: FolderTree, label: "Files" },
-  { id: "editor", icon: Code2, label: "Code" },
-  { id: "preview", icon: Eye, label: "Preview" },
-  { id: "chat", icon: MessageSquare, label: "Agent" },
+  { id: "files", icon: FolderTree, label: "الملفات" },
+  { id: "editor", icon: Code2, label: "الكود" },
+  { id: "preview", icon: Eye, label: "المعاينة" },
+  { id: "chat", icon: MessageSquare, label: "المساعد" },
   { id: "git", icon: GitBranch, label: "Git" },
 ];
 
@@ -416,28 +416,28 @@ const Index = () => {
   }, []);
 
   const activeMobileItem = MOBILE_NAV_ITEMS.find((item) => item.id === mobileTab) ?? MOBILE_NAV_ITEMS[1];
-  const activeMobileFileLabel = activeFile?.name ?? "Select a file";
-  const mobileWorkspaceLabel = selectedGitHubRepo?.full_name ?? "Local workspace";
+  const activeMobileFileLabel = activeFile?.name ?? "اختر ملفاً";
+  const mobileWorkspaceLabel = selectedGitHubRepo?.full_name ?? "مساحة عمل محلية";
   const activeMobileDetail =
     mobileTab === "editor"
       ? activeMobileFileLabel
       : mobileTab === "files"
-        ? `${allFiles.length} files available`
+        ? `${allFiles.length} ملفاً متاحاً`
         : mobileTab === "chat"
-          ? `${messages.length} messages in context`
+          ? `${messages.length} رسالة في السياق`
           : mobileTab === "preview"
-            ? activeFile?.name ?? "Preview waiting for a file"
-            : "Branches, history, and diff tools";
+            ? activeFile?.name ?? "المعاينة بانتظار ملف"
+            : "الفروع، التاريخ، وأدوات المقارنة";
   const mobileFlowLabel =
     mobileTab === "editor"
-      ? `${openFiles.length} open tabs`
+      ? `${openFiles.length} تابات مفتوحة`
       : mobileTab === "files"
-        ? `${allFiles.length} tracked files`
+        ? `${allFiles.length} ملفاً مدرجاً`
         : mobileTab === "chat"
-          ? `${messages.length} active messages`
+          ? `${messages.length} رسالة نشطة`
           : mobileTab === "preview"
-            ? "Live render surface"
-            : "Commit and branch tools";
+            ? "سطح العرض المباشر"
+            : "أدوات الالتزام والفروع";
 
   const mobileShellPaddingClass = cn("flex-1 min-h-0", isLandscapeMobile ? "px-0" : "mobile-safe-shell");
   const mobileStageClass = cn(
@@ -482,10 +482,10 @@ const Index = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] uppercase tracking-[0.24em] text-muted-foreground">Workspace</span>
+                    <span className="text-[9px] uppercase tracking-[0.24em] text-muted-foreground">مساحة العمل</span>
                     {!isShortMobileHeight && (
                       <span className="rounded-full border border-white/8 bg-white/[0.03] px-2 py-0.5 text-[8px] font-mono uppercase tracking-[0.22em] text-muted-foreground">
-                        Mobile
+                        موبايل
                       </span>
                     )}
                   </div>
@@ -544,7 +544,7 @@ const Index = () => {
                   <div className="flex items-center gap-2">
                     <p className="text-[9px] uppercase tracking-[0.22em] text-muted-foreground">{activeMobileItem.label}</p>
                     <span className="rounded-full border border-white/8 bg-white/[0.03] px-2 py-0.5 text-[8px] uppercase tracking-[0.2em] text-muted-foreground">
-                      Active
+                      نشط
                     </span>
                   </div>
                   <p className="mt-0.5 truncate text-[11px] text-foreground/80">{activeMobileFileLabel}</p>
@@ -552,7 +552,7 @@ const Index = () => {
               </div>
 
               <div className={cn("text-[10px] text-muted-foreground", isCompactMobile ? "pl-10" : "text-right")}>
-                <p className="uppercase tracking-[0.2em]">{isLandscapeMobile ? "Touch-ready" : "Swipe tabs"}</p>
+                <p className="uppercase tracking-[0.2em]">{isLandscapeMobile ? "جاهز للمس" : "اسحب للتنقل"}</p>
                 <p className="mt-1 text-[11px] text-foreground/72">{mobileFlowLabel}</p>
               </div>
             </div>

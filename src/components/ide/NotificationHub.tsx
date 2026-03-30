@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { ar } from "date-fns/locale";
 
 interface NotificationHubProps {
     onOpenDashboard: () => void;
@@ -35,8 +36,6 @@ export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
     });
 
     // Count unread based on some local storage or just random mock for now
-    // A proper implementation would have an `is_read` column. 
-    // We will just assume anything from the last 5 minutes is "unread" for demo purposes.
     useEffect(() => {
         if (!notifications.length) return;
         const recentUnread = notifications.filter((n: any) => {
@@ -56,13 +55,13 @@ export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
                 (payload) => {
                     // Show a toast for new or updated tasks
                     if (payload.eventType === "INSERT") {
-                        toast.success(`New Task: ${payload.new.title}`, {
-                            description: "A new AI operation has started.",
+                        toast.success(`مهمة جديدة: ${payload.new.title}`, {
+                            description: "بدأت عملية ذكاء اصطناعي جديدة.",
                             icon: <Activity className="w-4 h-4 text-blue-500" />
                         });
                     } else if (payload.eventType === "UPDATE") {
                         if (payload.new.status === "done") {
-                            toast.success(`Task Completed: ${payload.new.title}`, {
+                            toast.success(`اكتملت المهمة: ${payload.new.title}`, {
                                 icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                             });
                         }
@@ -82,7 +81,7 @@ export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
 
     const markAllRead = () => {
         setUnreadCount(0);
-        toast("All notifications marked as read");
+        toast("تم تحديد جميع الإشعارات كمقروءة");
     };
 
     return (
@@ -91,8 +90,8 @@ export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
                 <button
                     type="button"
                     className="relative p-1.5 rounded-md hover:bg-secondary/60 transition-all duration-200 text-muted-foreground hover:text-foreground"
-                    title="Notifications"
-                    aria-label="Open notifications"
+                    title="الإشعارات"
+                    aria-label="فتح الإشعارات"
                     onClick={() => setUnreadCount(0)}
                 >
                     <Bell className="h-3.5 w-3.5" />
@@ -101,21 +100,21 @@ export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
                     )}
                 </button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl">
+            <PopoverContent align="end" className="w-80 p-0 overflow-hidden border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl" dir="rtl">
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/20">
-                    <h3 className="font-semibold text-sm flex items-center gap-2">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-secondary/20 flex-row-reverse">
+                    <h3 className="font-semibold text-sm flex items-center gap-2 flex-row-reverse">
                         <Bell className="w-4 h-4 text-primary" />
-                        Notification Hub
+                        مركز الإشعارات
                     </h3>
                     {notifications.length > 0 && (
                         <button
                             type="button"
                             onClick={markAllRead}
-                            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                            className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 flex-row-reverse"
                         >
                             <Archive className="w-3 h-3" />
-                            Clear All
+                            مسح الكل
                         </button>
                     )}
                 </div>
@@ -123,19 +122,19 @@ export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
                 {/* Body */}
                 <div className="max-h-[350px] overflow-y-auto hide-scrollbar flex flex-col">
                     {isLoading ? (
-                        <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-2">
+                        <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-2 font-cairo">
                             <Activity className="w-5 h-5 animate-pulse text-primary/50" />
-                            Syncing signals...
+                            جاري مزامنة الإشارات...
                         </div>
                     ) : notifications.length === 0 ? (
-                        <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-2">
+                        <div className="p-8 text-center text-xs text-muted-foreground flex flex-col items-center gap-2 font-cairo">
                             <CheckCircle2 className="w-8 h-8 opacity-20" />
-                            <p>You're all caught up!</p>
-                            <p className="text-[10px] opacity-70">No new system events found.</p>
+                            <p>لا توجد إشعارات جديدة!</p>
+                            <p className="text-[10px] opacity-70">لم يتم العثور على أحداث نظام جديدة.</p>
                         </div>
                     ) : (
                         notifications.map((notif: any) => (
-                            <div key={notif.id} className="flex gap-3 px-4 py-3 border-b border-border/50 hover:bg-secondary/30 transition-colors group cursor-pointer">
+                            <div key={notif.id} className="flex gap-3 px-4 py-3 border-b border-border/50 hover:bg-secondary/30 transition-colors group cursor-pointer flex-row-reverse">
                                 <div className="mt-0.5">
                                     {notif.status === "done" ? (
                                         <div className="p-1.5 rounded-full bg-ide-success/10 text-ide-success">
@@ -151,14 +150,14 @@ export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex-1">
+                                <div className="flex-1 text-right">
                                     <p className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
                                         {notif.title}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground mt-1 flex items-center justify-between">
-                                        <span className="capitalize">{notif.status} Phase</span>
+                                    <p className="text-[10px] text-muted-foreground mt-1 flex items-center justify-between flex-row-reverse" dir="ltr">
+                                        <span className="capitalize ml-2">مرحلة {notif.status === 'done' ? 'الاكتمال' : notif.status === 'todo' ? 'البدء' : 'التنفيذ'}</span>
                                         <span>
-                                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                                            {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: ar })}
                                         </span>
                                     </p>
                                 </div>
@@ -172,14 +171,13 @@ export function NotificationHub({ onOpenDashboard }: NotificationHubProps) {
                     <button
                         type="button"
                         onClick={onOpenDashboard}
-                        className="w-full text-xs text-primary font-medium hover:underline flex items-center justify-center gap-1 group"
+                        className="w-full text-xs text-primary font-medium hover:underline flex items-center justify-center gap-1 group flex-row-reverse"
                     >
-                        Open Command Center
-                        <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        فتح مركز القيادة
+                        <ExternalLink className="w-3 h-3 group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 transition-transform rtl:rotate-180" />
                     </button>
                 </div>
             </PopoverContent>
         </Popover>
     );
 }
-
