@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&family=Big+Shoulders+Display:wght@200..900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -93,7 +93,7 @@
   pointer-events: none;
   z-index: 9999;
   opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%%' height='100%%' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
 }
 
 /* Refined scrollbar */
@@ -311,4 +311,74 @@
 .proactive-alert {
   border-left: 2px solid hsl(var(--primary));
   @apply bg-primary/5 p-3 rounded-r-lg animate-fade-in;
+}
+
+/* Avant-Garde Landing Utilities */
+.avant-diagonal-flow {
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 15% 100%);
+}
+
+.volumetric-glow {
+  box-shadow:
+    0 35px 60px -20px rgba(0,0,0,0.8),
+    inset 0 1px 0 rgba(255,255,255,0.1),
+    0 0 0 1px rgba(255,255,255,0.05);
+}
+
+.multi-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image:
+    radial-gradient(circle at 25% 25%, hsl(45 100% 60% / 0.15) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n1'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%%' height='100%%' filter='url(%23n1)' opacity='0.4'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n2'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.75' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%%' height='100%%' filter='url(%23n2)' opacity='0.3'/%3E%3C/svg%3E");
+  mix-blend-mode: soft-light;
+  animation: noise-shift 20s linear infinite;
+}
+
+@keyframes noise-shift {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-5%, -5%); }
+  20% { transform: translate(-10%, 5%); }
+  30% { transform: translate(5%, -10%); }
+  40% { transform: translate(-5%, 15%); }
+  50% { transform: translate(15%, 5%); }
+  60% { transform: translate(-15%, 10%); }
+  70% { transform: translate(10%, 15%); }
+  80% { transform: translate(-15%, -5%); }
+  90% { transform: translate(5%, -15%); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.drop-shadow-glow {
+  filter: drop-shadow(0 2px 4px hsl(var(--primary) / 0.3));
+}
+
+.hover-particle {
+  position: relative;
+  overflow: visible;
+}
+
+.hover-particle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle 20px at var(--mouse-x, 50%) var(--mouse-y, 50%), hsl(45 100% 60% / 0.3), transparent);
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.320, 1);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hover-particle:hover::after {
+  opacity: 1;
+  transform: scale(1);
 }

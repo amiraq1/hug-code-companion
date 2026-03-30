@@ -17,11 +17,15 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
-        <Index />
+        {showSplash ? (
+          <SplashScreen onFinish={handleSplashFinish} />
+        ) : (
+          <Index />
+        )}
       </TooltipProvider>
     </QueryClientProvider>
   );
+
 };
 
 export default App;

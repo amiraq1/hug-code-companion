@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, lazy, Suspense, useEffect, useTransition } from "react";
+import { useState, useCallback, useMemo, lazy, Suspense, useEffect, useTransition, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   MessageSquare,
@@ -74,8 +74,7 @@ const Index = () => {
     {
       id: "1",
       role: "assistant",
-      content:
-        "مرحبًا بك في HugCode. أستطيع مساعدتك في كتابة الكود، إصلاح الأخطاء، وشرح الحلول داخل مساحة العمل الحالية.",
+      content: "مرحبًا بك في HugCode. أستطيع مساعدةك في كتابة الكود، إصلاح الأخطاء، وشرح الحلول داخل مساحة العمل الحالية.",
       timestamp: new Date(),
     },
   ]);

@@ -56,7 +56,7 @@ export const LandingScreen = ({ onEnter }: LandingScreenProps) => {
           <Button
             onClick={onEnter}
             variant="ghost"
-            className="h-11 rounded-full border border-white/10 bg-white/[0.03] px-4 text-white hover:bg-white/[0.08] hover:text-white"
+            className="h-11 rounded-full border border-white/10 bg-white/[0.03] px-4 text-white hover:bg-white/[0.08] hover:text-white hover-particle"
           >
             Enter Studio
             <ArrowUpRight className="h-4 w-4" />
@@ -68,7 +68,7 @@ export const LandingScreen = ({ onEnter }: LandingScreenProps) => {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="mobile-hero-surface mobile-grid-overlay rounded-[30px] p-5"
+            className="mobile-hero-surface mobile-grid-overlay avant-diagonal-flow volumetric-glow multi-noise rounded-[30px] p-5 hover-particle"
             style={{ y: yElement1 }}
           >
             <div className="relative space-y-5">
@@ -83,37 +83,47 @@ export const LandingScreen = ({ onEnter }: LandingScreenProps) => {
               </div>
 
               <div className="space-y-3">
-                <h1 className="font-display text-[2.55rem] leading-[0.92] tracking-[-0.08em] text-white">
-                  Build with
-                  <span className="block text-primary">clarity.</span>
+                <h1 className="font-display font-black text-[clamp(2.2rem,6vw,3.5rem)] leading-[0.88] tracking-[-0.05em] text-white">
+                  Code with
+                  <span className="block text-primary">Intention.</span>
                 </h1>
                 <p className="max-w-sm text-sm leading-6 text-white/68">
                   A phone-first coding surface that keeps files, preview, Git, and the AI assistant in one calm flow.
                 </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {mobileHighlights.map(({ label, value, icon: Icon }) => (
-                  <Card key={label} className="mobile-quiet-surface rounded-[22px] border-white/8 bg-transparent">
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <Icon className="h-4 w-4 text-primary" />
-                        <span className="text-[10px] uppercase tracking-[0.22em] text-white/35">{label}</span>
-                      </div>
-                      <p className="mt-4 text-sm font-semibold tracking-tight text-white">{value}</p>
-                    </CardContent>
-                  </Card>
+              <div className="grid grid-cols-[repeat(3,minmax(0,1fr))] gap-3 -skew-y-3">
+                {mobileHighlights.map(({ label, value, icon: Icon }, i) => (
+                  <motion.div
+                    key={label}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: i * 0.1 }}
+                    className="hover-particle"
+                  >
+                    <Card className="mobile-quiet-surface volumetric-glow rounded-[22px] border-white/8 bg-transparent hover:scale-[1.02]">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <Icon className="h-4 w-4 text-primary glow-primary" />
+                          <span className="text-[10px] uppercase tracking-[0.22em] text-white/35">{label}</span>
+                        </div>
+                        <p className="mt-4 text-sm font-semibold tracking-tight text-white">{value}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 ))}
               </div>
 
               <div className="grid gap-2">
-                <Button
-                  onClick={onEnter}
-                  className="h-12 rounded-[18px] text-sm font-semibold shadow-[0_22px_44px_-28px_rgba(255,209,91,0.95)]"
-                >
-                  Launch IDE
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
+                <motion.div whileHover={{ scale: 1.02 }} className="hover-particle">
+                  <Button
+                    onClick={onEnter}
+                    className="h-12 rounded-[22px] bg-gradient-to-r from-primary/90 to-accent/70 text-sm font-black shadow-[0_25px_50px_-30px_rgba(69,57,255,0.6)] hover:shadow-[0_30px_60px_-35px_rgba(69,57,255,0.8)] font-display"
+                  >
+                    Launch IDE
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                </motion.div>
                 <Button
                   onClick={onEnter}
                   variant="outline"
@@ -126,18 +136,28 @@ export const LandingScreen = ({ onEnter }: LandingScreenProps) => {
             </div>
           </motion.section>
 
-          <section className="grid grid-cols-2 gap-3">
-            {mobileBenefits.map(({ icon: Icon, title, description }) => (
-              <Card key={title} className="mobile-quiet-surface rounded-[26px] border-white/8 bg-transparent">
-                <CardContent className="flex h-full flex-col p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-primary">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <h2 className="mt-4 text-sm font-semibold tracking-tight text-white">{title}</h2>
-                  <p className="mt-2 text-[12px] leading-5 text-white/58">{description}</p>
-                </CardContent>
-              </Card>
+          <section className="relative grid grid-cols-2 gap-4 [grid-template-areas:'a_b'] pt-8">
+            {mobileBenefits.map(({ icon: Icon, title, description }, i) => (
+              <motion.div
+                key={title}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.4 + i * 0.15 }}
+                className="hover-particle relative z-10"
+                style={{ gridArea: `a_${i + 1}` as any }}
+              >
+                <Card className="mobile-quiet-surface volumetric-glow rounded-[26px] border-primary/20 bg-gradient-to-br from-transparent/50 to-primary/5 hover:scale-105">
+                  <CardContent className="flex h-full flex-col p-5 pb-6">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-3xl border-2 border-primary/30 bg-primary/10 backdrop-blur-sm text-primary glow-accent">
+                      <Icon className="h-5 w-5 drop-shadow-glow" />
+                    </div>
+                    <h2 className="mt-5 font-display text-base font-bold tracking-tight text-white">{title}</h2>
+                    <p className="mt-3 text-sm leading-relaxed text-white/75">{description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
+            <div className="pointer-events-none absolute inset-0 bg-[conic-gradient(from_225deg_at_50%_50%,transparent_0deg,transparent_90deg,_hsl(var(--accent)/0.06)_180deg,hsl(var(--primary)/0.08)_270deg)] [mask-image:radial-gradient(ellipse_30%_40%_at_20%_80%,transparent,black)] animate-spin-slow opacity-60" />
           </section>
 
           <motion.div
@@ -146,7 +166,7 @@ export const LandingScreen = ({ onEnter }: LandingScreenProps) => {
             transition={{ duration: 0.8, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
             style={{ y: yElement2 }}
           >
-            <Card className="mobile-quiet-surface mobile-grid-overlay overflow-hidden rounded-[30px] border-white/8 bg-transparent">
+            <Card className="mobile-quiet-surface mobile-grid-overlay avant-diagonal-flow volumetric-glow multi-noise overflow-hidden rounded-[30px] border-primary/15 relative hover:scale-[1.01] hover-particle">
               <CardContent className="p-0">
                 <div className="flex items-center gap-2 border-b border-white/8 px-4 py-3">
                   <div className="flex gap-1.5">
